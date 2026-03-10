@@ -26,7 +26,17 @@ msgInput.addEventListener("keypress", function(event){
 // Receive messages
 socket.on("message", (data) => {
     const div = document.createElement("div");
-    div.innerText = data.user + ": " + data.text;
+    div.classList.add("message"); // default class
+
+    if(data.user === username){
+        // Messages sent by you
+        div.classList.add("sent");
+        div.innerText = data.text; // optional: skip username
+    } else {
+        // Messages from others
+        div.innerText = data.user + ": " + data.text;
+    }
+
     messages.appendChild(div);
     messages.scrollTop = messages.scrollHeight; // auto-scroll
 });

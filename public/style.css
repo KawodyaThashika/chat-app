@@ -277,3 +277,22 @@ background:#2575fc;
 #messages::-webkit-scrollbar-track {
     background: transparent;
 }
+
+/* Default: received messages on left */
+#messages .message {
+    align-self: flex-start; /* left side */
+    background: rgba(255, 255, 255, 0.15); /* light bubble */
+    color: #000;
+    padding: 10px 15px;
+    border-radius: 15px;
+    max-width: 60%;
+    box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+}
+
+/* Sent messages on right */
+#messages .sent {
+    align-self: flex-end; /* right side */
+    background: #6a11cb; /* purple bubble */
+    color: #fff; /* white text */
+    border-radius: 15px;
+}
