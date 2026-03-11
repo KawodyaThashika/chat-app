@@ -1,46 +1,36 @@
 <!DOCTYPE html>
 <html>
-
 <head>
-<title>Modern Chat</title>
-<link rel="stylesheet" href="style.css">
+    <title>Modern Chat</title>
+    <link rel="stylesheet" href="style.css">
 </head>
-
 <body>
 
 <div class="background">
-    <span></span>
-    <span></span>
-    <span></span>
-    <span></span>
+    <span></span><span></span><span></span><span></span>
+    <span></span><span></span><span></span><span></span>
 </div>
 
 <div class="chat-container">
 
     <div class="sidebar">
-        <!-- <h3>Online Users</h3> -->
+        <h3>Online Users</h3>
         <div id="users"></div>
     </div>
 
     <div class="chat-area">
-
-        <div class="chat-header">
-            Real-Time Chat
-        </div>
-
+        <div class="chat-header">Real-Time Chat</div>
         <div id="messages" class="messages"></div>
-
         <div class="chat-input">
-            <input id="msg" placeholder="Type your message...">
+            <input id="msg" placeholder="Type your message..." 
+                   onkeypress="if(event.key==='Enter'){sendMsg();}">
             <button onclick="sendMsg()">Send</button>
         </div>
-
     </div>
 
 </div>
 
 <script src="/socket.io/socket.io.js"></script>
 <script src="client.js"></script>
-
 </body>
 </html>
