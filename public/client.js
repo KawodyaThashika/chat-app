@@ -1,14 +1,51 @@
 const socket = io();
-const username = localStorage.getItem("username");
+let username = "";
 
-socket.emit("join", username);
+fetch("/username")
+.then(res => res.json())
+.then(data => {
+    if(!data.username){
+        window.location.href = "login.html";
+    } else {
+        username = data.username;
+        socket.emit("join", username);
+        loadAllUsers();
+    }
+});
 
-const messages = document.getElementById("messages");
-const usersDiv = document.getElementById("users");
-const msgInput = document.getElementById("msg");
+function loadAllUsers() {
+    fetch("/all-users")
+    .then(res => res.json())
+    .then(users => {
+        const usersDiv = document.getElementById("users");
+        usersDiv.innerHTML = "";
 
-// Send message function
+        // ✅ Show current user at top separately
+        const selfDiv = document.createElement("div");
+        selfDiv.textContent = "👤 " + username + " (You)";
+        selfDiv.classList.add("current-user");
+        usersDiv.appendChild(selfDiv);
+
+        // ✅ Show all OTHER users below
+        users.forEach(u => {
+            if(u.username === username) return; // skip self
+            const div = document.createElement("div");
+            div.textContent = u.username;
+            usersDiv.appendChild(div);
+        });
+    });
+}
+
+socket.on("previousMessages", (messages) => {
+    messages.forEach(m => addMessage(m.user, m.message, m.user === username));
+});
+
+socket.on("message", (data) => {
+    addMessage(data.user, data.text, data.user === username);
+});
+
 function sendMsg(){
+    const msgInput = document.getElementById("msg");
     const msg = msgInput.value.trim();
     if(msg){
         socket.emit("message", msg);
@@ -16,35 +53,11 @@ function sendMsg(){
     }
 }
 
-// Enter key to send message
-msgInput.addEventListener("keypress", function(event){
-    if(event.key === "Enter"){
-        sendMsg();
-    }
-});
-
-// Receive messages
-socket.on("message", (data) => {
+function addMessage(user, message, isCurrentUser){
+    const messagesDiv = document.getElementById("messages");
     const div = document.createElement("div");
-    div.classList.add("message"); // default class
-
-    if(data.user === username){
-        // Messages sent by you
-        div.classList.add("sent");
-        div.innerText = data.text; // optional: skip username
-    } else {
-        // Messages from others
-        div.innerText = data.user + ": " + data.text;
-    }
-
-    messages.appendChild(div);
-    messages.scrollTop = messages.scrollHeight; // auto-scroll
-});
-
-// Update online users
-socket.on("users", (users) => {
-    usersDiv.innerHTML = "<h3>Online Users</h3>";
-    users.forEach(u => {
-        usersDiv.innerHTML += "<div>" + u + "</div>";
-    });
-});
+    div.textContent = `${user}: ${message}`;
+    div.className = isCurrentUser ? "sent" : "message";
+    messagesDiv.appendChild(div);
+    messagesDiv.scrollTop = messagesDiv.scrollHeight;
+}
