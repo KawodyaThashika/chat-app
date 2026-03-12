@@ -37,11 +37,11 @@ app.post("/register", (req, res) => {
     const sql = "INSERT INTO users(username,email,password) VALUES(?,?,?)";
     db.query(sql, [username, email, password], (err) => {
         if (err) {
-            console.error("Register error:", err.message); // shows real error in Railway logs
+            console.error("Register error:", err.message);
             if (err.code === "ER_DUP_ENTRY") {
                 return res.send("Email already exists");
             }
-            return res.send("Registration failed: " + err.message);
+            return res.send("Registration failed: " + err.message); // ✅ shows real error
         }
         res.redirect("/login.html");
     });
