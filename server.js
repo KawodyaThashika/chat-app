@@ -29,9 +29,20 @@ app.use(session({
 // REGISTER
 app.post("/register", (req, res) => {
     const { username, email, password } = req.body;
+
+    if (!username || !email || !password) {
+        return res.send("All fields are required");
+    }
+
     const sql = "INSERT INTO users(username,email,password) VALUES(?,?,?)";
     db.query(sql, [username, email, password], (err) => {
-        if (err) return res.send("Email already exists");
+        if (err) {
+            console.error("Register error:", err.message); // shows real error in Railway logs
+            if (err.code === "ER_DUP_ENTRY") {
+                return res.send("Email already exists");
+            }
+            return res.send("Registration failed: " + err.message);
+        }
         res.redirect("/login.html");
     });
 });
