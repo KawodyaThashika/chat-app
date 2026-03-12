@@ -1,10 +1,12 @@
+require("dotenv").config(); // ✅ must be FIRST line
+
 const express = require("express");
 const http = require("http");
 const { Server } = require("socket.io");
-const mysql = require("mysql2");
 const bodyParser = require("body-parser");
 const session = require("express-session");
 const MySQLStore = require("express-mysql-session")(session);
+const db = require("./db"); // ✅ import db connection
 
 const app = express();
 const server = http.createServer(app);
@@ -13,28 +15,15 @@ const io = new Server(server);
 app.use(express.static("public"));
 app.use(bodyParser.urlencoded({ extended: true }));
 
-// MySQL Connection
-const db = mysql.createConnection({
-    host: "localhost",
-    user: "root",
-    password: "root",
-    database: "chat_app"
-});
-
-db.connect(err => {
-    if (err) throw err;
-    console.log("MySQL Connected");
-});
-
-// ✅ Store sessions in MySQL so they survive refresh/restart
+// ✅ Store sessions in MySQL
 const sessionStore = new MySQLStore({}, db);
 
 app.use(session({
     secret: "chat_secret",
     resave: false,
     saveUninitialized: false,
-    store: sessionStore,         // ✅ persist to DB
-    cookie: { maxAge: 1000 * 60 * 60 * 24 } // 24 hours
+    store: sessionStore,
+    cookie: { maxAge: 1000 * 60 * 60 * 24 }
 }));
 
 // REGISTER
@@ -54,7 +43,7 @@ app.post("/login", (req, res) => {
     db.query(sql, [email, password], (err, result) => {
         if (result.length > 0) {
             req.session.username = result[0].username;
-            req.session.save(() => {          // ✅ force save before redirect
+            req.session.save(() => {
                 res.redirect("/chat.html");
             });
         } else {
@@ -76,16 +65,14 @@ app.get("/all-users", (req, res) => {
     });
 });
 
-// ✅ Online users tracked by username (not socket.id) so refresh re-adds them
 let users = {};
 
 io.on("connection", (socket) => {
 
     socket.on("join", (username) => {
-        socket.username = username;           // ✅ store on socket object
-        users[username] = socket.id;          // ✅ keyed by username, not socket.id
-
-        io.emit("users", Object.keys(users)); // ✅ send usernames
+        socket.username = username;
+        users[username] = socket.id;
+        io.emit("users", Object.keys(users));
 
         db.query("SELECT * FROM messages ORDER BY timestamp ASC LIMIT 50", (err, results) => {
             if (err) console.log(err);
@@ -106,11 +93,11 @@ io.on("connection", (socket) => {
 
     socket.on("disconnect", () => {
         if (socket.username) {
-            delete users[socket.username];    // ✅ remove by username
+            delete users[socket.username];
             io.emit("users", Object.keys(users));
         }
     });
 });
 
-const PORT = 3000;
+const PORT = process.env.PORT || 3000; // ✅ use env PORT too
 server.listen(PORT, () => console.log("Server running on port " + PORT));
