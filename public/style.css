@@ -330,3 +330,34 @@ background:#2575fc;
     color: #6a11cb;
 }
 
+
+.user-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px;
+    border-bottom: 1px solid rgba(255,255,255,0.2);
+    color: white;
+}
+
+.dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    display: inline-block;
+    flex-shrink: 0;
+}
+
+.dot.online {
+    background: #22c55e;
+    box-shadow: 0 0 6px #22c55e;
+}
+
+.dot.offline {
+    background: #6b7280;
+}
+
+.current-user span:last-child {
+    font-weight: bold;
+    color: #a78bfa;
+}
