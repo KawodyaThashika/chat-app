@@ -4,7 +4,7 @@ let onlineUsers = [];
 let typingTimeout;
 let chatMode = "group";
 let privateChatWith = null;
-let unreadCounts = {}; // ✅ track unread messages per user
+let unreadCounts = {};
 
 fetch("/username")
 .then(res => res.json())
@@ -41,9 +41,8 @@ function startPrivateChat(targetUser) {
     privateChatWith = targetUser;
     chatMode = "private";
 
-    // ✅ Clear unread count when opening chat
     unreadCounts[targetUser] = 0;
-    loadAllUsers(); // re-render to remove badge
+    loadAllUsers();
 
     document.getElementById("chat-header").textContent = `🔒 Private Chat with ${targetUser}`;
     document.getElementById("privateBtn").classList.add("active");
@@ -73,7 +72,6 @@ function loadAllUsers() {
         const usersDiv = document.getElementById("users");
         usersDiv.innerHTML = "";
 
-        // Current user at top
         const selfDiv = document.createElement("div");
         selfDiv.className = "user-item current-user";
         selfDiv.innerHTML = `
@@ -82,16 +80,14 @@ function loadAllUsers() {
         `;
         usersDiv.appendChild(selfDiv);
 
-        // Other users with unread badge
         users.forEach(u => {
             if(u.username === username) return;
             const isOnline = onlineUsers.includes(u.username);
-            const unread = unreadCounts[u.username] || 0; // ✅ get unread count
+            const unread = unreadCounts[u.username] || 0;
 
             const div = document.createElement("div");
             div.className = "user-item";
 
-            // ✅ highlight selected user
             if(u.username === privateChatWith) {
                 div.classList.add("selected");
             }
@@ -104,8 +100,6 @@ function loadAllUsers() {
 
             div.onclick = () => startPrivateChat(u.username);
             div.style.cursor = "pointer";
-            div.title = `Click to chat privately with ${u.username}`;
-
             usersDiv.appendChild(div);
         });
     });
@@ -124,34 +118,17 @@ socket.on("message", (data) => {
     }
 });
 
-// ✅ Private message received — increment badge if chat not open
+// ✅ Only handle INCOMING private messages from others
 socket.on("privateMessage", ({ from, message }) => {
-    if (from === username) return; // ✅ ignore own messages (already shown above)
+    if (from === username) return; // ✅ ignore own — already shown in sendMsg()
 
     if (chatMode === "private" && from === privateChatWith) {
-        addMessage(from, message, false);
+        addMessage(from, message, false); // ✅ show in chat
     } else {
-        unreadCounts[from] = (unreadCounts[from] || 0) + 1;
+        unreadCounts[from] = (unreadCounts[from] || 0) + 1; // ✅ badge
         loadAllUsers();
     }
 });
-
-socket.on("privateMessage", ({ to, message }) => {
-    const from = socket.username;
-    if (!from) return;
-
-    db.query("INSERT INTO private_messages(sender, receiver, message) VALUES(?,?,?)",
-        [from, to, message], (err) => {
-            if (err) console.log(err);
-        });
-
-    // ✅ Only send to receiver, NOT back to sender
-    const receiverSocketId = users[to];
-    if (receiverSocketId) {
-        io.to(receiverSocketId).emit("privateMessage", { from, message });
-    }
-});
-
 
 socket.on("typing", (user) => {
     if (user !== username) {
@@ -176,7 +153,7 @@ function sendMsg(){
         socket.emit("message", msg);
     } else if (chatMode === "private" && privateChatWith) {
         socket.emit("privateMessage", { to: privateChatWith, message: msg });
-        addMessage(username, msg, true); // ✅ immediately show sent message
+        addMessage(username, msg, true); // ✅ immediately show own message
     } else {
         alert("Please select a user to chat with!");
         return;
