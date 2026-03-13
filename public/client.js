@@ -5,6 +5,7 @@ let typingTimeout;
 let chatMode = "group";
 let privateChatWith = null;
 let unreadCounts = {};
+let lastShownDate = null;
 
 fetch("/username")
 .then(res => res.json())
@@ -18,47 +19,93 @@ fetch("/username")
     }
 });
 
-function switchMode(mode) {
-    chatMode = mode;
-    privateChatWith = null;
+function getDateLabel(timestamp) {
+    const msgDate = timestamp ? new Date(timestamp) : new Date();
+    const today = new Date();
+    const yesterday = new Date();
+    yesterday.setDate(today.getDate() - 1);
 
-    document.getElementById("groupBtn").classList.toggle("active", mode === "group");
-    document.getElementById("privateBtn").classList.toggle("active", mode === "private");
+    const isSameDay = (a, b) =>
+        a.getDate() === b.getDate() &&
+        a.getMonth() === b.getMonth() &&
+        a.getFullYear() === b.getFullYear();
 
-    const messagesDiv = document.getElementById("messages");
-    messagesDiv.innerHTML = "";
+    if (isSameDay(msgDate, today)) return "Today";
+    if (isSameDay(msgDate, yesterday)) return "Yesterday";
 
-    if (mode === "group") {
-        document.getElementById("chat-header").textContent = "👥 Group Chat";
-        socket.emit("join", username);
-    } else {
-        document.getElementById("chat-header").textContent = "🔒 Select a user to chat";
-        messagesDiv.innerHTML = `<div class="info-msg">👈 Select a user from the sidebar to start private chat</div>`;
+    // Older — show full date like "March 10, 2026"
+    return msgDate.toLocaleDateString([], {
+        year: 'numeric', month: 'long', day: 'numeric'
+    });
+}
+
+// ✅ Show date separator if date changed
+function showDateSeparatorIfNeeded(timestamp) {
+    const label = getDateLabel(timestamp);
+    if (label !== lastShownDate) {
+        lastShownDate = label;
+        const messagesDiv = document.getElementById("messages");
+        const separator = document.createElement("div");
+        separator.className = "date-separator";
+        separator.innerHTML = `<span>${label}</span>`;
+        messagesDiv.appendChild(separator);
     }
 }
 
-function startPrivateChat(targetUser) {
-    privateChatWith = targetUser;
-    chatMode = "private";
 
-    unreadCounts[targetUser] = 0;
-    loadAllUsers();
-
-    document.getElementById("chat-header").textContent = `🔒 Private Chat with ${targetUser}`;
-    document.getElementById("privateBtn").classList.add("active");
-    document.getElementById("groupBtn").classList.remove("active");
-
-    const messagesDiv = document.getElementById("messages");
-    messagesDiv.innerHTML = "";
-
-    fetch(`/private-messages/${username}/${targetUser}`)
-    .then(res => res.json())
-    .then(messages => {
-        messages.forEach(m => {
-            addMessage(m.sender, m.message, m.sender === username);
-        });
-    });
+function switchMode(mode) {
+    lastShownDate = null; // ✅ reset date tracker
+    chatMode = mode;
+    // ... rest of your code
 }
+
+// function switchMode(mode) {
+//     chatMode = mode;
+//     privateChatWith = null;
+
+//     document.getElementById("groupBtn").classList.toggle("active", mode === "group");
+//     document.getElementById("privateBtn").classList.toggle("active", mode === "private");
+
+//     const messagesDiv = document.getElementById("messages");
+//     messagesDiv.innerHTML = "";
+
+//     if (mode === "group") {
+//         document.getElementById("chat-header").textContent = "👥 Group Chat";
+//         socket.emit("join", username);
+//     } else {
+//         document.getElementById("chat-header").textContent = "🔒 Select a user to chat";
+//         messagesDiv.innerHTML = `<div class="info-msg">👈 Select a user from the sidebar to start private chat</div>`;
+//     }
+// }
+
+function startPrivateChat(targetUser) {
+    lastShownDate = null; // ✅ reset date tracker
+    privateChatWith = targetUser;
+    // ... rest of your code
+}
+
+// function startPrivateChat(targetUser) {
+//     privateChatWith = targetUser;
+//     chatMode = "private";
+
+//     unreadCounts[targetUser] = 0;
+//     loadAllUsers();
+
+//     document.getElementById("chat-header").textContent = `🔒 Private Chat with ${targetUser}`;
+//     document.getElementById("privateBtn").classList.add("active");
+//     document.getElementById("groupBtn").classList.remove("active");
+
+//     const messagesDiv = document.getElementById("messages");
+//     messagesDiv.innerHTML = "";
+
+//     fetch(`/private-messages/${username}/${targetUser}`)
+//     .then(res => res.json())
+//     .then(messages => {
+//         messages.forEach(m => {
+//             addMessage(m.sender, m.message, m.sender === username);
+//         });
+//     });
+// }
 
 socket.on("users", (usersArr) => {
     onlineUsers = usersArr;
@@ -178,11 +225,12 @@ document.getElementById("msg").addEventListener("input", () => {
     }, 2000);
 });
 
-function addMessage(user, message, isCurrentUser, timestamp = null){
+function addMessage(user, message, isCurrentUser, timestamp = null) {
+    showDateSeparatorIfNeeded(timestamp); // ✅ show date label before message
+
     const messagesDiv = document.getElementById("messages");
     const div = document.createElement("div");
 
-    // ✅ Format time
     const time = timestamp
         ? new Date(timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
         : new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
