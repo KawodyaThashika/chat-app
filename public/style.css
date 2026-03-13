@@ -361,3 +361,12 @@ background:#2575fc;
     font-weight: bold;
     color: #a78bfa;
 }
+
+.typing-indicator {
+    padding: 5px 20px;
+    color: rgba(255, 255, 255, 0.7);
+    font-style: italic;
+    font-size: 13px;
+    min-height: 24px;
+    display: none;
+}
