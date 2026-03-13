@@ -108,6 +108,17 @@ io.on("connection", (socket) => {
             io.emit("users", Object.keys(users));
         }
     });
+
+    // ✅ Typing indicators
+    socket.on("typing", (user) => {
+        socket.broadcast.emit("typing", user); // send to everyone except sender
+    });
+
+    socket.on("stopTyping", () => {
+        socket.broadcast.emit("stopTyping");
+    });
+
+
 });
 
 const PORT = process.env.PORT || 3000; // ✅ use env PORT too

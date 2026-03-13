@@ -19,15 +19,18 @@
     </div>
 
     <div class="chat-area">
-        <div class="chat-header">Real-Time Chat</div>
-        <div id="messages" class="messages"></div>
-        <div class="chat-input">
-            <input id="msg" placeholder="Type your message..." 
-                   onkeypress="if(event.key==='Enter'){sendMsg();}">
-            <button onclick="sendMsg()">Send</button>
-        </div>
-    </div>
+    <div class="chat-header">Real-Time Chat</div>
+    <div id="messages" class="messages"></div>
 
+    <!-- ✅ Add this line -->
+    <div id="typing-indicator" class="typing-indicator"></div>
+
+    <div class="chat-input">
+        <input id="msg" placeholder="Type your message..."
+               onkeypress="if(event.key==='Enter'){sendMsg();}">
+        <button onclick="sendMsg()">Send</button>
+    </div>
+</div>
 </div>
 
 <script src="/socket.io/socket.io.js"></script>

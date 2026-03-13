@@ -1,6 +1,7 @@
 const socket = io();
 let username = "";
 let onlineUsers = [];
+let typingTimeout;
 
 fetch("/username")
 .then(res => res.json())
@@ -61,14 +62,38 @@ socket.on("message", (data) => {
     addMessage(data.user, data.text, data.user === username);
 });
 
+
+socket.on("typing", (user) => {
+    const typingDiv = document.getElementById("typing-indicator");
+    typingDiv.textContent = `${user} is typing...`;
+    typingDiv.style.display = "block";
+});
+
+socket.on("stopTyping", () => {
+    const typingDiv = document.getElementById("typing-indicator");
+    typingDiv.textContent = "";
+    typingDiv.style.display = "none";
+});
+
 function sendMsg(){
     const msgInput = document.getElementById("msg");
     const msg = msgInput.value.trim();
     if(msg){
         socket.emit("message", msg);
+        socket.emit("stopTyping"); // ✅ stop typing when message sent
         msgInput.value = "";
     }
 }
+
+
+document.getElementById("msg").addEventListener("input", () => {
+    socket.emit("typing", username);
+
+    clearTimeout(typingTimeout);
+    typingTimeout = setTimeout(() => {
+        socket.emit("stopTyping");
+    }, 2000); // stop after 2 seconds of no typing
+});
 
 function addMessage(user, message, isCurrentUser){
     const messagesDiv = document.getElementById("messages");
