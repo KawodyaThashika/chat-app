@@ -126,15 +126,32 @@ socket.on("message", (data) => {
 
 // ✅ Private message received — increment badge if chat not open
 socket.on("privateMessage", ({ from, message }) => {
+    if (from === username) return; // ✅ ignore own messages (already shown above)
+
     if (chatMode === "private" && from === privateChatWith) {
-        // Chat is open — show message directly
-        addMessage(from, message, from === username);
-    } else if (from !== username) {
-        // Chat not open — increment unread count and update sidebar
+        addMessage(from, message, false);
+    } else {
         unreadCounts[from] = (unreadCounts[from] || 0) + 1;
-        loadAllUsers(); // re-render badge
+        loadAllUsers();
     }
 });
+
+socket.on("privateMessage", ({ to, message }) => {
+    const from = socket.username;
+    if (!from) return;
+
+    db.query("INSERT INTO private_messages(sender, receiver, message) VALUES(?,?,?)",
+        [from, to, message], (err) => {
+            if (err) console.log(err);
+        });
+
+    // ✅ Only send to receiver, NOT back to sender
+    const receiverSocketId = users[to];
+    if (receiverSocketId) {
+        io.to(receiverSocketId).emit("privateMessage", { from, message });
+    }
+});
+
 
 socket.on("typing", (user) => {
     if (user !== username) {
@@ -159,6 +176,7 @@ function sendMsg(){
         socket.emit("message", msg);
     } else if (chatMode === "private" && privateChatWith) {
         socket.emit("privateMessage", { to: privateChatWith, message: msg });
+        addMessage(username, msg, true); // ✅ immediately show sent message
     } else {
         alert("Please select a user to chat with!");
         return;
