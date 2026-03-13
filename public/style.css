@@ -446,3 +446,25 @@ background:#2575fc;
     border: 1px solid rgba(255,255,255,0.3);
     margin-left: auto;
 }
+
+/* Message layout */
+.message, .sent {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.msg-text {
+    display: block;
+}
+
+/* ✅ Time styling */
+.msg-time {
+    font-size: 11px;
+    opacity: 0.6;
+    align-self: flex-end; /* right side of bubble */
+}
+
+.message .msg-time {
+    align-self: flex-start; /* left side for received */
+}
