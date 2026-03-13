@@ -108,24 +108,31 @@ function loadAllUsers() {
 socket.on("previousMessages", (messages) => {
     if (chatMode === "group") {
         document.getElementById("messages").innerHTML = "";
-        messages.forEach(m => addMessage(m.user, m.message, m.user === username));
+        messages.forEach(m => addMessage(m.user, m.message, m.user === username, m.timestamp));
     }
 });
 
 socket.on("message", (data) => {
     if (chatMode === "group") {
-        addMessage(data.user, data.text, data.user === username);
+        addMessage(data.user, data.text, data.user === username); // no timestamp = now
     }
+});
+
+fetch(`/private-messages/${username}/${targetUser}`)
+.then(res => res.json())
+.then(messages => {
+    messages.forEach(m => {
+        addMessage(m.sender, m.message, m.sender === username, m.timestamp);
+    });
 });
 
 // ✅ Only handle INCOMING private messages from others
 socket.on("privateMessage", ({ from, message }) => {
-    if (from === username) return; // ✅ ignore own — already shown in sendMsg()
-
+    if (from === username) return;
     if (chatMode === "private" && from === privateChatWith) {
-        addMessage(from, message, false); // ✅ show in chat
+        addMessage(from, message, false); // no timestamp = now
     } else {
-        unreadCounts[from] = (unreadCounts[from] || 0) + 1; // ✅ badge
+        unreadCounts[from] = (unreadCounts[from] || 0) + 1;
         loadAllUsers();
     }
 });
@@ -153,7 +160,7 @@ function sendMsg(){
         socket.emit("message", msg);
     } else if (chatMode === "private" && privateChatWith) {
         socket.emit("privateMessage", { to: privateChatWith, message: msg });
-        addMessage(username, msg, true); // ✅ immediately show own message
+        addMessage(username, msg, true); // no timestamp = now
     } else {
         alert("Please select a user to chat with!");
         return;
@@ -171,11 +178,21 @@ document.getElementById("msg").addEventListener("input", () => {
     }, 2000);
 });
 
-function addMessage(user, message, isCurrentUser){
+function addMessage(user, message, isCurrentUser, timestamp = null){
     const messagesDiv = document.getElementById("messages");
     const div = document.createElement("div");
-    div.textContent = `${user}: ${message}`;
+
+    // ✅ Format time
+    const time = timestamp
+        ? new Date(timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        : new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
     div.className = isCurrentUser ? "sent" : "message";
+    div.innerHTML = `
+        <span class="msg-text">${user}: ${message}</span>
+        <span class="msg-time">${time}</span>
+    `;
+
     messagesDiv.appendChild(div);
     messagesDiv.scrollTop = messagesDiv.scrollHeight;
 }
