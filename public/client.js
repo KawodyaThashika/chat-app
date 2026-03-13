@@ -2,8 +2,9 @@ const socket = io();
 let username = "";
 let onlineUsers = [];
 let typingTimeout;
-let chatMode = "group";      // ✅ "group" or "private"
-let privateChatWith = null;  // ✅ who we're chatting with
+let chatMode = "group";
+let privateChatWith = null;
+let unreadCounts = {}; // ✅ track unread messages per user
 
 fetch("/username")
 .then(res => res.json())
@@ -17,7 +18,6 @@ fetch("/username")
     }
 });
 
-// ✅ Switch between group and private mode
 function switchMode(mode) {
     chatMode = mode;
     privateChatWith = null;
@@ -30,7 +30,6 @@ function switchMode(mode) {
 
     if (mode === "group") {
         document.getElementById("chat-header").textContent = "👥 Group Chat";
-        // Reload group messages
         socket.emit("join", username);
     } else {
         document.getElementById("chat-header").textContent = "🔒 Select a user to chat";
@@ -38,16 +37,18 @@ function switchMode(mode) {
     }
 }
 
-// ✅ Start private chat with a user
 function startPrivateChat(targetUser) {
     privateChatWith = targetUser;
     chatMode = "private";
+
+    // ✅ Clear unread count when opening chat
+    unreadCounts[targetUser] = 0;
+    loadAllUsers(); // re-render to remove badge
 
     document.getElementById("chat-header").textContent = `🔒 Private Chat with ${targetUser}`;
     document.getElementById("privateBtn").classList.add("active");
     document.getElementById("groupBtn").classList.remove("active");
 
-    // Load previous private messages
     const messagesDiv = document.getElementById("messages");
     messagesDiv.innerHTML = "";
 
@@ -81,18 +82,26 @@ function loadAllUsers() {
         `;
         usersDiv.appendChild(selfDiv);
 
-        // Other users
+        // Other users with unread badge
         users.forEach(u => {
             if(u.username === username) return;
             const isOnline = onlineUsers.includes(u.username);
+            const unread = unreadCounts[u.username] || 0; // ✅ get unread count
+
             const div = document.createElement("div");
             div.className = "user-item";
+
+            // ✅ highlight selected user
+            if(u.username === privateChatWith) {
+                div.classList.add("selected");
+            }
+
             div.innerHTML = `
                 <span class="dot ${isOnline ? 'online' : 'offline'}"></span>
-                <span>${u.username}</span>
+                <span class="username-text">${u.username}</span>
+                ${unread > 0 ? `<span class="badge">${unread}</span>` : ''}
             `;
 
-            // ✅ Click user to start private chat
             div.onclick = () => startPrivateChat(u.username);
             div.style.cursor = "pointer";
             div.title = `Click to chat privately with ${u.username}`;
@@ -109,21 +118,24 @@ socket.on("previousMessages", (messages) => {
     }
 });
 
-// ✅ Group message received
 socket.on("message", (data) => {
     if (chatMode === "group") {
         addMessage(data.user, data.text, data.user === username);
     }
 });
 
-// ✅ Private message received
+// ✅ Private message received — increment badge if chat not open
 socket.on("privateMessage", ({ from, message }) => {
-    if (chatMode === "private" && (from === privateChatWith || from === username)) {
+    if (chatMode === "private" && from === privateChatWith) {
+        // Chat is open — show message directly
         addMessage(from, message, from === username);
+    } else if (from !== username) {
+        // Chat not open — increment unread count and update sidebar
+        unreadCounts[from] = (unreadCounts[from] || 0) + 1;
+        loadAllUsers(); // re-render badge
     }
 });
 
-// Typing indicators
 socket.on("typing", (user) => {
     if (user !== username) {
         const typingDiv = document.getElementById("typing-indicator");
@@ -144,10 +156,8 @@ function sendMsg(){
     if(!msg) return;
 
     if (chatMode === "group") {
-        // ✅ Send group message
         socket.emit("message", msg);
     } else if (chatMode === "private" && privateChatWith) {
-        // ✅ Send private message
         socket.emit("privateMessage", { to: privateChatWith, message: msg });
     } else {
         alert("Please select a user to chat with!");
