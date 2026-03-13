@@ -76,6 +76,19 @@ app.get("/all-users", (req, res) => {
     });
 });
 
+app.get("/private-messages/:user1/:user2", (req, res) => {
+    const { user1, user2 } = req.params;
+    const sql = `SELECT * FROM private_messages 
+                 WHERE (sender=? AND receiver=?) 
+                 OR (sender=? AND receiver=?) 
+                 ORDER BY timestamp ASC LIMIT 50`;
+    db.query(sql, [user1, user2, user2, user1], (err, result) => {
+        if (err) return res.json([]);
+        res.json(result);
+    });
+});
+
+
 let users = {};
 
 io.on("connection", (socket) => {
@@ -85,21 +98,51 @@ io.on("connection", (socket) => {
         users[username] = socket.id;
         io.emit("users", Object.keys(users));
 
+        // Load group messages
         db.query("SELECT * FROM messages ORDER BY timestamp ASC LIMIT 50", (err, results) => {
             if (err) console.log(err);
             else socket.emit("previousMessages", results);
         });
     });
 
+    // ✅ Group message
     socket.on("message", (msg) => {
         const user = socket.username;
         if (!user) return;
-
         db.query("INSERT INTO messages(user, message) VALUES(?,?)", [user, msg], (err) => {
             if (err) console.log(err);
         });
-
         io.emit("message", { user, text: msg });
+    });
+
+    // ✅ Private message
+    socket.on("privateMessage", ({ to, message }) => {
+        const from = socket.username;
+        if (!from) return;
+
+        // Save to DB
+        db.query("INSERT INTO private_messages(sender, receiver, message) VALUES(?,?,?)",
+            [from, to, message], (err) => {
+                if (err) console.log(err);
+            });
+
+        // Send to receiver if online
+        const receiverSocketId = users[to];
+        if (receiverSocketId) {
+            io.to(receiverSocketId).emit("privateMessage", { from, message });
+        }
+
+        // Send back to sender
+        socket.emit("privateMessage", { from, message });
+    });
+
+    // ✅ Typing indicators
+    socket.on("typing", (user) => {
+        socket.broadcast.emit("typing", user);
+    });
+
+    socket.on("stopTyping", () => {
+        socket.broadcast.emit("stopTyping");
     });
 
     socket.on("disconnect", () => {
@@ -108,17 +151,6 @@ io.on("connection", (socket) => {
             io.emit("users", Object.keys(users));
         }
     });
-
-    // ✅ Typing indicators
-    socket.on("typing", (user) => {
-        socket.broadcast.emit("typing", user); // send to everyone except sender
-    });
-
-    socket.on("stopTyping", () => {
-        socket.broadcast.emit("stopTyping");
-    });
-
-
 });
 
 const PORT = process.env.PORT || 3000; // ✅ use env PORT too
