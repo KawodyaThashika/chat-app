@@ -14,23 +14,36 @@
 <div class="chat-container">
 
     <div class="sidebar">
-        <h3>Online Users</h3>
+        <h3>Users</h3>
+
+        <!-- ✅ Chat mode toggle -->
+        <div class="chat-mode-btns">
+            <button id="groupBtn" class="mode-btn active" onclick="switchMode('group')">
+                👥 Group Chat
+            </button>
+            <button id="privateBtn" class="mode-btn" onclick="switchMode('private')">
+                🔒 Private Chat
+            </button>
+        </div>
+
         <div id="users"></div>
     </div>
 
     <div class="chat-area">
-    <div class="chat-header">Real-Time Chat</div>
-    <div id="messages" class="messages"></div>
+        <!-- ✅ Dynamic header showing who you're chatting with -->
+        <div class="chat-header" id="chat-header">👥 Group Chat</div>
 
-    <!-- ✅ Add this line -->
-    <div id="typing-indicator" class="typing-indicator"></div>
+        <div id="messages" class="messages"></div>
 
-    <div class="chat-input">
-        <input id="msg" placeholder="Type your message..."
-               onkeypress="if(event.key==='Enter'){sendMsg();}">
-        <button onclick="sendMsg()">Send</button>
+        <div id="typing-indicator" class="typing-indicator"></div>
+
+        <div class="chat-input">
+            <input id="msg" placeholder="Type your message..."
+                   onkeypress="if(event.key==='Enter'){sendMsg();}">
+            <button onclick="sendMsg()">Send</button>
+        </div>
     </div>
-</div>
+
 </div>
 
 <script src="/socket.io/socket.io.js"></script>

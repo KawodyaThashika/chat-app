@@ -370,3 +370,46 @@ background:#2575fc;
     min-height: 24px;
     display: none;
 }
+
+/* Chat mode buttons */
+.chat-mode-btns {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 15px;
+}
+
+.mode-btn {
+    padding: 8px 12px;
+    border: none;
+    border-radius: 20px;
+    background: rgba(255,255,255,0.1);
+    color: white;
+    cursor: pointer;
+    transition: 0.3s;
+    text-align: left;
+    font-size: 14px;
+}
+
+.mode-btn:hover {
+    background: rgba(255,255,255,0.2);
+}
+
+.mode-btn.active {
+    background: #6a11cb;
+    font-weight: bold;
+}
+
+/* Info message */
+.info-msg {
+    color: rgba(255,255,255,0.5);
+    text-align: center;
+    margin-top: 50px;
+    font-style: italic;
+}
+
+/* Highlight selected user in private chat */
+.user-item.selected {
+    background: rgba(106, 17, 203, 0.3);
+    border-radius: 10px;
+}
