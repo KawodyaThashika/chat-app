@@ -468,3 +468,32 @@ background:#2575fc;
 .message .msg-time {
     align-self: flex-start; /* left side for received */
 }
+
+
+/* ✅ WhatsApp style date separator */
+.date-separator {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 15px 0;
+    position: relative;
+}
+
+.date-separator::before,
+.date-separator::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: rgba(255, 255, 255, 0.2);
+}
+
+.date-separator span {
+    background: rgba(255, 255, 255, 0.15);
+    backdrop-filter: blur(5px);
+    color: rgba(255, 255, 255, 0.8);
+    font-size: 12px;
+    padding: 4px 12px;
+    border-radius: 20px;
+    margin: 0 10px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
