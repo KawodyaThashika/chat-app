@@ -277,9 +277,9 @@ background:#2575fc;
 #messages div {
     background: rgba(255, 255, 255, 0.15); /* slightly transparent bubbles */
     color: #000000; /* text readable */
-    padding: 10px 15px;
+    padding: 5px 15px;
     border-radius: 20px;
-    max-width: 50%;
+    /* max-width: 50%; */
     box-shadow: 0 3px 10px rgba(0,0,0,0.2);
     animation: fadeIn 0.3s ease;
    
@@ -470,7 +470,7 @@ background:#2575fc;
 }
 
 
-/* ✅ WhatsApp style date separator */
+
 .date-separator {
     display: flex;
     align-items: center;
