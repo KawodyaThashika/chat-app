@@ -1,4 +1,4 @@
-require("dotenv").config();
+require("dotenv").config(); // ✅ must be FIRST line
 
 const express = require("express");
 const http = require("http");
@@ -6,7 +6,7 @@ const { Server } = require("socket.io");
 const bodyParser = require("body-parser");
 const session = require("express-session");
 const MySQLStore = require("express-mysql-session")(session);
-const db = require("./db");
+const db = require("./db"); // ✅ import db connection
 
 const app = express();
 const server = http.createServer(app);
@@ -15,6 +15,7 @@ const io = new Server(server);
 app.use(express.static("public"));
 app.use(bodyParser.urlencoded({ extended: true }));
 
+// ✅ Store sessions in MySQL
 const sessionStore = new MySQLStore({}, db);
 
 app.use(session({
@@ -25,36 +26,49 @@ app.use(session({
     cookie: { maxAge: 1000 * 60 * 60 * 24 }
 }));
 
+// REGISTER
 app.post("/register", (req, res) => {
     const { username, email, password } = req.body;
-    if (!username || !email || !password) return res.send("All fields are required");
+
+    if (!username || !email || !password) {
+        return res.send("All fields are required");
+    }
+
     const sql = "INSERT INTO users(username,email,password) VALUES(?,?,?)";
     db.query(sql, [username, email, password], (err) => {
         if (err) {
-            if (err.code === "ER_DUP_ENTRY") return res.send("Email already exists");
-            return res.send("Registration failed: " + err.message);
+            console.error("Register error:", err.message);
+            if (err.code === "ER_DUP_ENTRY") {
+                return res.send("Email already exists");
+            }
+            return res.send("Registration failed: " + err.message); // ✅ shows real error
         }
         res.redirect("/login.html");
     });
 });
 
+// LOGIN
 app.post("/login", (req, res) => {
     const { email, password } = req.body;
     const sql = "SELECT * FROM users WHERE email=? AND password=?";
     db.query(sql, [email, password], (err, result) => {
         if (result.length > 0) {
             req.session.username = result[0].username;
-            req.session.save(() => res.redirect("/chat.html"));
+            req.session.save(() => {
+                res.redirect("/chat.html");
+            });
         } else {
             res.send("Invalid login");
         }
     });
 });
 
+// GET CURRENT USERNAME
 app.get("/username", (req, res) => {
     res.json({ username: req.session.username || null });
 });
 
+// GET ALL REGISTERED USERS
 app.get("/all-users", (req, res) => {
     db.query("SELECT username FROM users", (err, result) => {
         if (err) return res.send([]);
@@ -74,6 +88,7 @@ app.get("/private-messages/:user1/:user2", (req, res) => {
     });
 });
 
+
 let users = {};
 
 io.on("connection", (socket) => {
@@ -83,32 +98,25 @@ io.on("connection", (socket) => {
         users[username] = socket.id;
         io.emit("users", Object.keys(users));
 
+        // Load group messages
         db.query("SELECT * FROM messages ORDER BY timestamp ASC LIMIT 50", (err, results) => {
             if (err) console.log(err);
-            else {
-                // ✅ Parse reply_to JSON from DB
-                results = results.map(r => ({
-                    ...r,
-                    reply_to: r.reply_to ? JSON.parse(r.reply_to) : null
-                }));
-                socket.emit("previousMessages", results);
-            }
+            else socket.emit("previousMessages", results);
         });
     });
 
-    // ✅ Group message with reply support
+    // group message
     socket.on("message", ({ text, replyTo }) => {
         const user = socket.username;
         if (!user) return;
         const replyJson = replyTo ? JSON.stringify(replyTo) : null;
-        db.query("INSERT INTO messages(user, message, reply_to) VALUES(?,?,?)",
-            [user, text, replyJson], (err) => {
-                if (err) console.log(err);
-            });
+        db.query("INSERT INTO messages(user, message, reply_to) VALUES(?,?,?)", [user, text, replyJson], (err) => {
+            if (err) console.log(err);
+        });
         io.emit("message", { user, text, replyTo });
     });
 
-    // ✅ Private message with reply support
+    // private message
     socket.on("privateMessage", ({ to, message, replyTo }) => {
         const from = socket.username;
         if (!from) return;
@@ -125,8 +133,14 @@ io.on("connection", (socket) => {
         socket.emit("privateMessage", { from, message, replyTo });
     });
 
-    socket.on("typing", (user) => socket.broadcast.emit("typing", user));
-    socket.on("stopTyping", () => socket.broadcast.emit("stopTyping"));
+    // ✅ Typing indicators
+    socket.on("typing", (user) => {
+        socket.broadcast.emit("typing", user);
+    });
+
+    socket.on("stopTyping", () => {
+        socket.broadcast.emit("stopTyping");
+    });
 
     socket.on("disconnect", () => {
         if (socket.username) {
@@ -136,5 +150,5 @@ io.on("connection", (socket) => {
     });
 });
 
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 3000; // ✅ use env PORT too
 server.listen(PORT, () => console.log("Server running on port " + PORT));
