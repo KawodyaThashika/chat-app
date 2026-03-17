@@ -567,7 +567,7 @@ background:#2575fc;
 
 /* Quoted reply inside message bubble */
 .reply-quote {
-    background: rgba(0,0,0,0.15);
+    background: rgba(255, 255, 255, 0.863);
     border-left: 3px solid rgba(255,255,255,0.5);
     padding: 5px 10px;
     border-radius: 6px;
