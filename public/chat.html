@@ -37,6 +37,17 @@
 
         <div id="typing-indicator" class="typing-indicator"></div>
 
+        <div id="reply-box">
+        <div id="reply-box-text"></div>
+        <button onclick="cancelReply()">✕</button>
+        </div>
+
+        <div class="chat-input">
+            <input id="msg" placeholder="Type your message..."
+                onkeypress="if(event.key==='Enter'){sendMsg();}">
+            <button onclick="sendMsg()">Send</button>
+        </div>
+
         <div class="chat-input">
             <input id="msg" placeholder="Type your message..."
                    onkeypress="if(event.key==='Enter'){sendMsg();}">
@@ -46,13 +57,6 @@
 
     <div id="typing-indicator" class="typing-indicator"></div>
 
-        <!-- ADD THIS reply box -->
-        <div id="reply-box">
-            <div id="reply-box-text"></div>
-            <button onclick="cancelReply()">✕</button>
-        </div>
-
-        <div class="chat-input">
 
 </div>
 

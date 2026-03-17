@@ -6,6 +6,7 @@ let chatMode = "group";
 let privateChatWith = null;
 let unreadCounts = {};
 let lastShownDate = null;
+let replyingTo = null; // { user, text }
 
 fetch("/username")
 .then(res => res.json())
@@ -89,7 +90,7 @@ function startPrivateChat(targetUser) {
     .then(res => res.json())
     .then(messages => {
         messages.forEach(m => {
-            addMessage(m.sender, m.message, m.sender === username);
+            addMessage(m.sender, m.message, m.sender === username, m.timestamp, m.reply_to);
         });
     });
 }
@@ -139,35 +140,26 @@ function loadAllUsers() {
     });
 }
 
-socket.on("previousMessages", (messages) => {
-    if (chatMode === "group") {
-        document.getElementById("messages").innerHTML = "";
-        messages.forEach(m => addMessage(m.user, m.message, m.user === username, m.timestamp));
-    }
-});
-
 socket.on("message", (data) => {
     if (chatMode === "group") {
-        addMessage(data.user, data.text, data.user === username); // no timestamp = now
+        addMessage(data.user, data.text, data.user === username, null, data.replyTo);
     }
 });
 
-// fetch(`/private-messages/${username}/${targetUser}`)
-// .then(res => res.json())
-// .then(messages => {
-//     messages.forEach(m => {
-//         addMessage(m.sender, m.message, m.sender === username, m.timestamp);
-//     });
-// });
-
-// ✅ Only handle INCOMING private messages from others
-socket.on("privateMessage", ({ from, message }) => {
+socket.on("privateMessage", ({ from, message, replyTo }) => {
     if (from === username) return;
     if (chatMode === "private" && from === privateChatWith) {
-        addMessage(from, message, false); // no timestamp = now
+        addMessage(from, message, false, null, replyTo);
     } else {
         unreadCounts[from] = (unreadCounts[from] || 0) + 1;
         loadAllUsers();
+    }
+});
+
+socket.on("previousMessages", (messages) => {
+    if (chatMode === "group") {
+        document.getElementById("messages").innerHTML = "";
+        messages.forEach(m => addMessage(m.user, m.message, m.user === username, m.timestamp, m.reply_to));
     }
 });
 
@@ -191,15 +183,16 @@ function sendMsg(){
     if(!msg) return;
 
     if (chatMode === "group") {
-        socket.emit("message", msg);
+        socket.emit("message", { text: msg, replyTo: replyingTo });
     } else if (chatMode === "private" && privateChatWith) {
-        socket.emit("privateMessage", { to: privateChatWith, message: msg });
-        addMessage(username, msg, true); // no timestamp = now
+        socket.emit("privateMessage", { to: privateChatWith, message: msg, replyTo: replyingTo });
+        addMessage(username, msg, true, null, replyingTo);
     } else {
         alert("Please select a user to chat with!");
         return;
     }
 
+    cancelReply();
     socket.emit("stopTyping");
     msgInput.value = "";
 }
@@ -212,22 +205,57 @@ document.getElementById("msg").addEventListener("input", () => {
     }, 2000);
 });
 
-function addMessage(user, message, isCurrentUser, timestamp = null) {
-    showDateSeparatorIfNeeded(timestamp); // ✅ show date label before message
+function addMessage(user, message, isCurrentUser, timestamp = null, replyTo = null) {
+    showDateSeparatorIfNeeded(timestamp);
 
     const messagesDiv = document.getElementById("messages");
-    const div = document.createElement("div");
 
     const time = timestamp
         ? new Date(timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
         : new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
+    // Wrapper div
+    const wrapper = document.createElement("div");
+    wrapper.className = isCurrentUser ? "message-wrapper sent-wrapper" : "message-wrapper";
+
+    // Reply button
+    const replyBtn = document.createElement("button");
+    replyBtn.className = "reply-btn";
+    replyBtn.innerHTML = "↩";
+    replyBtn.title = "Reply";
+    replyBtn.onclick = () => setReply(user, message);
+
+    // Message bubble
+    const div = document.createElement("div");
     div.className = isCurrentUser ? "sent" : "message";
+
+    // Parse replyTo if it's a JSON string
+    let replyData = replyTo;
+    if (typeof replyTo === "string") {
+        try { replyData = JSON.parse(replyTo); } catch { replyData = null; }
+    }
+
     div.innerHTML = `
+        ${replyData ? `<div class="reply-quote">↩ ${replyData.user}: ${replyData.text}</div>` : ""}
         <span class="msg-text">${user}: ${message}</span>
         <span class="msg-time">${time}</span>
     `;
 
-    messagesDiv.appendChild(div);
+    wrapper.appendChild(div);
+    wrapper.appendChild(replyBtn);
+    messagesDiv.appendChild(wrapper);
     messagesDiv.scrollTop = messagesDiv.scrollHeight;
+}
+
+function setReply(user, text) {
+    replyingTo = { user, text };
+    document.getElementById("reply-box").classList.add("active");
+    document.getElementById("reply-box-text").textContent = `↩ ${user}: ${text}`;
+    document.getElementById("msg").focus();
+}
+
+function cancelReply() {
+    replyingTo = null;
+    document.getElementById("reply-box").classList.remove("active");
+    document.getElementById("reply-box-text").textContent = "";
 }
