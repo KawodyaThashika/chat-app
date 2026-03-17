@@ -582,4 +582,5 @@ background:#2575fc;
 .sent .reply-quote {
     border-left-color: rgba(255,255,255,0.6);
     background: rgba(0,0,0,0.2);
+    color: white;
 }
