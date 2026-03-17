@@ -584,11 +584,11 @@ background:#2575fc;
     overflow-wrap: break-word;
     white-space: pre-wrap;
     max-width: 100%;
-    color: white;
+    color: #ffffff;
 }
 
 .sent .reply-quote {
     border-left-color: rgba(255,255,255,0.6);
     background: rgba(0,0,0,0.2);
-    color: white;
+    color: #ffffff;
 }
