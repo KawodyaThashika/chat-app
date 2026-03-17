@@ -152,13 +152,13 @@ socket.on("message", (data) => {
     }
 });
 
-fetch(`/private-messages/${username}/${targetUser}`)
-.then(res => res.json())
-.then(messages => {
-    messages.forEach(m => {
-        addMessage(m.sender, m.message, m.sender === username, m.timestamp);
-    });
-});
+// fetch(`/private-messages/${username}/${targetUser}`)
+// .then(res => res.json())
+// .then(messages => {
+//     messages.forEach(m => {
+//         addMessage(m.sender, m.message, m.sender === username, m.timestamp);
+//     });
+// });
 
 // ✅ Only handle INCOMING private messages from others
 socket.on("privateMessage", ({ from, message }) => {
