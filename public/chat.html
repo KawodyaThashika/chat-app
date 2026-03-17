@@ -16,7 +16,6 @@
     <div class="sidebar">
         <h3>Users</h3>
 
-        <!-- ✅ Chat mode toggle -->
         <div class="chat-mode-btns">
             <button id="groupBtn" class="mode-btn active" onclick="switchMode('group')">
                 👥 Group Chat
@@ -30,7 +29,6 @@
     </div>
 
     <div class="chat-area">
-        <!-- ✅ Dynamic header showing who you're chatting with -->
         <div class="chat-header" id="chat-header">👥 Group Chat</div>
 
         <div id="messages" class="messages"></div>
@@ -38,14 +36,8 @@
         <div id="typing-indicator" class="typing-indicator"></div>
 
         <div id="reply-box">
-        <div id="reply-box-text"></div>
-        <button onclick="cancelReply()">✕</button>
-        </div>
-
-        <div class="chat-input">
-            <input id="msg" placeholder="Type your message..."
-                onkeypress="if(event.key==='Enter'){sendMsg();}">
-            <button onclick="sendMsg()">Send</button>
+            <div id="reply-box-text"></div>
+            <button onclick="cancelReply()">✕</button>
         </div>
 
         <div class="chat-input">
@@ -54,9 +46,6 @@
             <button onclick="sendMsg()">Send</button>
         </div>
     </div>
-
-    <div id="typing-indicator" class="typing-indicator"></div>
-
 
 </div>
 
