@@ -329,7 +329,7 @@ background:#2575fc;
     color: #fff;
     padding: 10px 15px;
     border-radius: 18px 18px 4px 18px; /* pointed bottom-right */
-    max-width: 65%;
+    max-width: fit-content;
     min-width: 60px;
     box-shadow: 0 3px 12px rgba(106, 17, 203, 0.4);
     /* ✅ Word wrap fixes */
