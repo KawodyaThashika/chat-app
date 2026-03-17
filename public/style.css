@@ -584,6 +584,7 @@ background:#2575fc;
     overflow-wrap: break-word;
     white-space: pre-wrap;
     max-width: 100%;
+    color: white;
 }
 
 .sent .reply-quote {
