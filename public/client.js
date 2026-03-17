@@ -6,6 +6,7 @@ let chatMode = "group";
 let privateChatWith = null;
 let unreadCounts = {};
 let lastShownDate = null;
+let replyTo = null; // ✅ reply state
 
 fetch("/username")
 .then(res => res.json())
@@ -24,22 +25,15 @@ function getDateLabel(timestamp) {
     const today = new Date();
     const yesterday = new Date();
     yesterday.setDate(today.getDate() - 1);
-
     const isSameDay = (a, b) =>
         a.getDate() === b.getDate() &&
         a.getMonth() === b.getMonth() &&
         a.getFullYear() === b.getFullYear();
-
     if (isSameDay(msgDate, today)) return "Today";
     if (isSameDay(msgDate, yesterday)) return "Yesterday";
-
-    // Older — show full date like "March 10, 2026"
-    return msgDate.toLocaleDateString([], {
-        year: 'numeric', month: 'long', day: 'numeric'
-    });
+    return msgDate.toLocaleDateString([], { year: 'numeric', month: 'long', day: 'numeric' });
 }
 
-// ✅ Show date separator if date changed
 function showDateSeparatorIfNeeded(timestamp) {
     const label = getDateLabel(timestamp);
     if (label !== lastShownDate) {
@@ -55,13 +49,12 @@ function showDateSeparatorIfNeeded(timestamp) {
 function switchMode(mode) {
     chatMode = mode;
     privateChatWith = null;
-
     document.getElementById("groupBtn").classList.toggle("active", mode === "group");
     document.getElementById("privateBtn").classList.toggle("active", mode === "private");
-
     const messagesDiv = document.getElementById("messages");
     messagesDiv.innerHTML = "";
-
+    lastShownDate = null;
+    cancelReply();
     if (mode === "group") {
         document.getElementById("chat-header").textContent = "👥 Group Chat";
         socket.emit("join", username);
@@ -74,14 +67,13 @@ function switchMode(mode) {
 function startPrivateChat(targetUser) {
     privateChatWith = targetUser;
     chatMode = "private";
-
     unreadCounts[targetUser] = 0;
+    lastShownDate = null;
+    cancelReply();
     loadAllUsers();
-
     document.getElementById("chat-header").textContent = `🔒 Private Chat with ${targetUser}`;
     document.getElementById("privateBtn").classList.add("active");
     document.getElementById("groupBtn").classList.remove("active");
-
     const messagesDiv = document.getElementById("messages");
     messagesDiv.innerHTML = "";
 
@@ -89,7 +81,10 @@ function startPrivateChat(targetUser) {
     .then(res => res.json())
     .then(messages => {
         messages.forEach(m => {
-            addMessage(m.sender, m.message, m.sender === username);
+            const reply = m.reply_to
+                ? (typeof m.reply_to === "string" ? JSON.parse(m.reply_to) : m.reply_to)
+                : null;
+            addMessage(m.sender, m.message, m.sender === username, m.timestamp, reply);
         });
     });
 }
@@ -108,30 +103,21 @@ function loadAllUsers() {
 
         const selfDiv = document.createElement("div");
         selfDiv.className = "user-item current-user";
-        selfDiv.innerHTML = `
-            <span class="dot online"></span>
-            <span>${username} (You)</span>
-        `;
+        selfDiv.innerHTML = `<span class="dot online"></span><span>${username} (You)</span>`;
         usersDiv.appendChild(selfDiv);
 
         users.forEach(u => {
             if(u.username === username) return;
             const isOnline = onlineUsers.includes(u.username);
             const unread = unreadCounts[u.username] || 0;
-
             const div = document.createElement("div");
             div.className = "user-item";
-
-            if(u.username === privateChatWith) {
-                div.classList.add("selected");
-            }
-
+            if(u.username === privateChatWith) div.classList.add("selected");
             div.innerHTML = `
                 <span class="dot ${isOnline ? 'online' : 'offline'}"></span>
                 <span class="username-text">${u.username}</span>
                 ${unread > 0 ? `<span class="badge">${unread}</span>` : ''}
             `;
-
             div.onclick = () => startPrivateChat(u.username);
             div.style.cursor = "pointer";
             usersDiv.appendChild(div);
@@ -142,29 +128,26 @@ function loadAllUsers() {
 socket.on("previousMessages", (messages) => {
     if (chatMode === "group") {
         document.getElementById("messages").innerHTML = "";
-        messages.forEach(m => addMessage(m.user, m.message, m.user === username, m.timestamp));
+        lastShownDate = null;
+        messages.forEach(m => {
+            const reply = m.reply_to
+                ? (typeof m.reply_to === "string" ? JSON.parse(m.reply_to) : m.reply_to)
+                : null;
+            addMessage(m.user, m.message, m.user === username, m.timestamp, reply);
+        });
     }
 });
 
 socket.on("message", (data) => {
     if (chatMode === "group") {
-        addMessage(data.user, data.text, data.user === username); // no timestamp = now
+        addMessage(data.user, data.text, data.user === username, null, data.replyTo);
     }
 });
 
-// fetch(`/private-messages/${username}/${targetUser}`)
-// .then(res => res.json())
-// .then(messages => {
-//     messages.forEach(m => {
-//         addMessage(m.sender, m.message, m.sender === username, m.timestamp);
-//     });
-// });
-
-// ✅ Only handle INCOMING private messages from others
-socket.on("privateMessage", ({ from, message }) => {
+socket.on("privateMessage", ({ from, message, replyTo: incomingReply }) => {
     if (from === username) return;
     if (chatMode === "private" && from === privateChatWith) {
-        addMessage(from, message, false); // no timestamp = now
+        addMessage(from, message, false, null, incomingReply);
     } else {
         unreadCounts[from] = (unreadCounts[from] || 0) + 1;
         loadAllUsers();
@@ -185,21 +168,36 @@ socket.on("stopTyping", () => {
     typingDiv.style.display = "none";
 });
 
-function sendMsg(){
+// ✅ Set reply
+function setReply(user, message) {
+    replyTo = { user, message };
+    document.getElementById("reply-box").style.display = "flex";
+    document.getElementById("reply-box-text").textContent = `↩ ${user}: ${message}`;
+    document.getElementById("msg").focus();
+}
+
+// ✅ Cancel reply
+function cancelReply() {
+    replyTo = null;
+    document.getElementById("reply-box").style.display = "none";
+}
+
+function sendMsg() {
     const msgInput = document.getElementById("msg");
     const msg = msgInput.value.trim();
     if(!msg) return;
 
     if (chatMode === "group") {
-        socket.emit("message", msg);
+        socket.emit("message", { text: msg, replyTo });
     } else if (chatMode === "private" && privateChatWith) {
-        socket.emit("privateMessage", { to: privateChatWith, message: msg });
-        addMessage(username, msg, true); // no timestamp = now
+        socket.emit("privateMessage", { to: privateChatWith, message: msg, replyTo });
+        addMessage(username, msg, true, null, replyTo);
     } else {
         alert("Please select a user to chat with!");
         return;
     }
 
+    cancelReply();
     socket.emit("stopTyping");
     msgInput.value = "";
 }
@@ -207,14 +205,12 @@ function sendMsg(){
 document.getElementById("msg").addEventListener("input", () => {
     socket.emit("typing", username);
     clearTimeout(typingTimeout);
-    typingTimeout = setTimeout(() => {
-        socket.emit("stopTyping");
-    }, 2000);
+    typingTimeout = setTimeout(() => socket.emit("stopTyping"), 2000);
 });
 
-function addMessage(user, message, isCurrentUser, timestamp = null) {
-    showDateSeparatorIfNeeded(timestamp); // ✅ show date label before message
-
+// ✅ Add message to UI
+function addMessage(user, message, isCurrentUser, timestamp = null, replyData = null) {
+    showDateSeparatorIfNeeded(timestamp);
     const messagesDiv = document.getElementById("messages");
     const div = document.createElement("div");
 
@@ -223,10 +219,20 @@ function addMessage(user, message, isCurrentUser, timestamp = null) {
         : new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
     div.className = isCurrentUser ? "sent" : "message";
+
     div.innerHTML = `
+        ${replyData ? `
+        <div class="reply-preview">
+            <span class="reply-user">${replyData.user}</span>
+            <span class="reply-text">${replyData.message}</span>
+        </div>` : ''}
         <span class="msg-text">${user}: ${message}</span>
         <span class="msg-time">${time}</span>
+        <button class="reply-btn">↩ Reply</button>
     `;
+
+    // ✅ Safe event listener - works with Sinhala and any special characters
+    div.querySelector(".reply-btn").addEventListener("click", () => setReply(user, message));
 
     messagesDiv.appendChild(div);
     messagesDiv.scrollTop = messagesDiv.scrollHeight;
