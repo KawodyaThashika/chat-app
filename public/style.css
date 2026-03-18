@@ -571,7 +571,7 @@ background:#2575fc;
 }
 
 /* Quoted reply inside message bubble */
-.reply-quote {
+/* .reply-quote {
     background: rgba(255, 255, 255, 0.863);
     border-left: 3px solid rgba(106, 17, 203, 0.5);
     padding: 5px 10px;
@@ -580,12 +580,29 @@ background:#2575fc;
     margin-bottom: 5px;
     opacity: 0.85;
     /* ✅ word wrap for quoted text too */
-    word-break: break-word;
+    /* word-break: break-word;
     overflow-wrap: break-word;
     white-space: pre-wrap;
     max-width: 100%;
     color: #ffffff;
+} */ 
+
+.reply-quote {
+    background: rgba(0,0,0,0.15);
+    border-left: 3px solid rgba(255,255,255,0.5);
+    padding: 5px 10px;
+    border-radius: 6px;
+    font-size: 12px;
+    margin-bottom: 5px;
+    opacity: 0.85;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    color: rgba(255, 255, 255, 0.9); /* ✅ ADD THIS LINE */
 }
+
+
+
 
 .sent .reply-quote {
     border-left-color: rgba(255,255,255,0.6);
