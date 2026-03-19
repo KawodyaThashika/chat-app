@@ -66,14 +66,14 @@ function switchMode(mode) {
     messagesDiv.innerHTML = "";
 
     if (mode === "group") {
-        document.getElementById("chat-header").textContent = "👥 Group Chat";
+        document.getElementById("chat-header-text").textContent = "👥 Group Chat";
         socket.emit("join", username);
     } else if (mode === "saved") {
         // NEW: load saved messages view
-        document.getElementById("chat-header").textContent = "📌 Saved Messages";
+        document.getElementById("chat-header-text").textContent = "📌 Saved Messages";
         loadSavedMessages();
     } else {
-        document.getElementById("chat-header").textContent = "🔒 Select a user to chat";
+        document.getElementById("chat-header-text").textContent = "🔒 Select a user to chat";
         messagesDiv.innerHTML = `<div class="info-msg">👈 Select a user from the sidebar to start private chat</div>`;
     }
 }
@@ -85,7 +85,7 @@ function startPrivateChat(targetUser) {
     unreadCounts[targetUser] = 0;
     loadAllUsers();
 
-    document.getElementById("chat-header").textContent = `🔒 Private Chat with ${targetUser}`;
+    document.getElementById("chat-header-text").textContent = `🔒 Private Chat with ${targetUser}`;
     document.getElementById("privateBtn").classList.add("active");
     document.getElementById("groupBtn").classList.remove("active");
 
@@ -140,7 +140,7 @@ function loadAllUsers() {
                 ${unread > 0 ? `<span class="badge">${unread}</span>` : ''}
             `;
 
-            div.onclick = () => startPrivateChat(u.username);
+            div.onclick = () => { startPrivateChat(u.username); if (window.matchMedia('(max-width:700px)').matches) closeSidebar(); };
             div.style.cursor = "pointer";
             usersDiv.appendChild(div);
         });
@@ -567,4 +567,30 @@ socket.on("privateMessageDeleted", ({ id }) => {
         wrapper.style.transition = "all 0.2s";
         setTimeout(() => wrapper.remove(), 200);
     }
+});
+
+
+// ── NEW: Mobile sidebar open/close ───────────────────────────────────────
+
+function openSidebar() {
+    document.getElementById("sidebar").classList.add("open");
+    document.getElementById("sidebar-overlay").classList.add("active");
+}
+
+function closeSidebar() {
+    document.getElementById("sidebar").classList.remove("open");
+    document.getElementById("sidebar-overlay").classList.remove("active");
+}
+
+// Auto-close sidebar after selecting a chat mode on mobile
+const _origSwitchMode = switchMode;
+// Wrap switchMode to close sidebar on mobile after selection
+const _mobileMediaQuery = window.matchMedia("(max-width: 700px)");
+document.addEventListener("DOMContentLoaded", () => {
+    // Close sidebar when a mode button or user is clicked on mobile
+    document.querySelectorAll(".mode-btn").forEach(btn => {
+        btn.addEventListener("click", () => {
+            if (_mobileMediaQuery.matches) closeSidebar();
+        });
+    });
 });

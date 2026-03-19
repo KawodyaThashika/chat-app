@@ -825,3 +825,229 @@ background:#2575fc;
     /* Add a little right padding so text doesn't flow under the ⋮ button */
     padding-right: 22px;
 }
+
+
+/* ═══════════════════════════════════════════════════════════════
+   NEW: Responsive design — laptop, tablet, and mobile
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ── Hamburger button (hidden on desktop) ── */
+.hamburger-btn {
+    display: none;
+    background: none;
+    border: none;
+    color: white;
+    font-size: 22px;
+    cursor: pointer;
+    padding: 0 10px 0 0;
+    line-height: 1;
+    flex-shrink: 0;
+}
+
+/* Make chat-header a flex row so hamburger + title sit side-by-side */
+.chat-header {
+    display: flex;
+    align-items: center;
+}
+
+#chat-header-text {
+    flex: 1;
+}
+
+/* ── Sidebar close button (hidden on desktop) ── */
+.sidebar-close-btn {
+    display: none;
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    background: rgba(255,255,255,0.15);
+    border: none;
+    color: white;
+    font-size: 16px;
+    border-radius: 50%;
+    width: 28px;
+    height: 28px;
+    cursor: pointer;
+    z-index: 1;
+}
+
+/* ── Dark overlay behind open sidebar on mobile ── */
+.sidebar-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.5);
+    z-index: 998;
+}
+
+.sidebar-overlay.active {
+    display: block;
+}
+
+/* ══════════════════════════════════════
+   BREAKPOINT 1: Large laptop (≤ 1100px)
+   — shrink the container a little
+   ══════════════════════════════════════ */
+@media (max-width: 1100px) {
+    .chat-container {
+        width: 98vw;
+        height: 92vh;
+        border-radius: 14px;
+    }
+}
+
+/* ══════════════════════════════════════
+   BREAKPOINT 2: Small laptop / tablet (≤ 850px)
+   — narrower sidebar
+   ══════════════════════════════════════ */
+@media (max-width: 850px) {
+    .chat-container {
+        width: 100vw;
+        height: 100dvh;
+        border-radius: 0;
+    }
+
+    .sidebar {
+        width: 200px;
+    }
+
+    .chat-container {
+        border-radius: 0;
+    }
+}
+
+/* ══════════════════════════════════════
+   BREAKPOINT 3: Mobile (≤ 700px)
+   — sidebar slides in as drawer
+   ══════════════════════════════════════ */
+@media (max-width: 700px) {
+
+    body {
+        align-items: flex-start;
+        overflow: hidden;
+    }
+
+    .chat-container {
+        width: 100vw;
+        height: 100dvh;
+        border-radius: 0;
+        position: relative;
+    }
+
+    /* Sidebar becomes a fixed slide-in drawer */
+    .sidebar {
+        position: fixed;
+        top: 0;
+        left: 0;
+        height: 100dvh;
+        width: 80vw;
+        max-width: 300px;
+        z-index: 999;
+        transform: translateX(-100%);
+        transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+        border-radius: 0 16px 16px 0;
+        padding-top: 50px; /* room for close button */
+    }
+
+    .sidebar.open {
+        transform: translateX(0);
+    }
+
+    /* Show hamburger and close buttons on mobile */
+    .hamburger-btn {
+        display: block;
+    }
+
+    .sidebar-close-btn {
+        display: block;
+    }
+
+    /* Chat area fills full width on mobile */
+    .chat-area {
+        width: 100%;
+    }
+
+    /* Slightly smaller text input on mobile */
+    .chat-input {
+        padding: 10px;
+    }
+
+    .chat-input button {
+        padding: 10px 14px;
+        font-size: 13px;
+    }
+
+    /* Message bubbles don't go full width */
+    #messages .message,
+    #messages .sent {
+        max-width: 82vw;
+    }
+
+    /* Larger tap targets for the ⋮ menu button */
+    .msg-menu-btn {
+        font-size: 18px;
+        padding: 4px 7px;
+        opacity: 0.7; /* always slightly visible on mobile — no hover */
+    }
+
+    /* Always show ⋮ on mobile (no hover state on touchscreens) */
+    #messages .sent .msg-menu-btn,
+    #messages .message .msg-menu-btn {
+        opacity: 0.6;
+    }
+
+    /* Slightly smaller font in header */
+    .chat-header {
+        font-size: 14px;
+        padding: 12px;
+    }
+
+    /* Saved cards full width on mobile */
+    .saved-card {
+        max-width: 100%;
+    }
+}
+
+/* ══════════════════════════════════════
+   BREAKPOINT 4: Very small phones (≤ 400px)
+   ══════════════════════════════════════ */
+@media (max-width: 400px) {
+    .sidebar {
+        width: 88vw;
+    }
+
+    .chat-input button {
+        padding: 9px 10px;
+        font-size: 12px;
+    }
+
+    #messages .message,
+    #messages .sent {
+        max-width: 90vw;
+        font-size: 13px;
+    }
+
+    .msg-image {
+        max-width: 160px;
+        max-height: 160px;
+    }
+}
+
+/* ══════════════════════════════════════════════════
+   Prevent floating background bubbles from causing
+   overflow scroll on mobile
+   ══════════════════════════════════════════════════ */
+@media (max-width: 700px) {
+    .background span {
+        display: none;
+    }
+}
+
+/* ── Login / Register form responsive ── */
+@media (max-width: 480px) {
+    .login-container {
+        width: 92vw;
+        padding: 28px 20px;
+        border-radius: 16px;
+    }
+}

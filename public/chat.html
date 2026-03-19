@@ -2,6 +2,8 @@
 <html>
 <head>
     <title>Chat Application</title>
+    <!-- ADDED: viewport meta — critical for mobile scaling -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -13,7 +15,14 @@
 
 <div class="chat-container">
 
-    <div class="sidebar">
+    <!-- ADDED: sidebar overlay backdrop (mobile only, closes sidebar on tap) -->
+    <div id="sidebar-overlay" class="sidebar-overlay" onclick="closeSidebar()"></div>
+
+    <div class="sidebar" id="sidebar">
+
+        <!-- ADDED: close button inside sidebar for mobile -->
+        <button class="sidebar-close-btn" onclick="closeSidebar()">✕</button>
+
         <h3>Users</h3>
 
         <div class="chat-mode-btns">
@@ -23,7 +32,6 @@
             <button id="privateBtn" class="mode-btn" onclick="switchMode('private')">
                 🔒 Private Chat
             </button>
-            <!-- NEW: Saved Messages button -->
             <button id="savedBtn" class="mode-btn" onclick="switchMode('saved')">
                 📌 Saved Messages
             </button>
@@ -33,7 +41,12 @@
     </div>
 
     <div class="chat-area">
-        <div class="chat-header" id="chat-header">👥 Group Chat</div>
+
+        <!-- CHANGED: header now has a hamburger button on the left for mobile -->
+        <div class="chat-header" id="chat-header">
+            <button class="hamburger-btn" onclick="openSidebar()" title="Menu">☰</button>
+            <span id="chat-header-text">👥 Group Chat</span>
+        </div>
 
         <div id="messages" class="messages"></div>
 
