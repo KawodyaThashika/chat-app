@@ -89,8 +89,9 @@ function startPrivateChat(targetUser) {
     fetch(`/private-messages/${username}/${targetUser}`)
     .then(res => res.json())
     .then(messages => {
+        // CHANGED: also pass m.image_data and m.image_type to addMessage
         messages.forEach(m => {
-            addMessage(m.sender, m.message, m.sender === username, m.timestamp, m.reply_to);
+            addMessage(m.sender, m.message, m.sender === username, m.timestamp, m.reply_to, m.image_data, m.image_type);
         });
     });
 }
@@ -140,26 +141,29 @@ function loadAllUsers() {
     });
 }
 
+// CHANGED: also pass data.imageData and data.imageType to addMessage
 socket.on("message", (data) => {
     if (chatMode === "group") {
-        addMessage(data.user, data.text, data.user === username, null, data.replyTo);
+        addMessage(data.user, data.text, data.user === username, null, data.replyTo, data.imageData, data.imageType);
     }
 });
 
-socket.on("privateMessage", ({ from, message, replyTo }) => {
+// CHANGED: destructure imageData + imageType from event, pass to addMessage
+socket.on("privateMessage", ({ from, message, replyTo, imageData, imageType }) => {
     if (from === username) return;
     if (chatMode === "private" && from === privateChatWith) {
-        addMessage(from, message, false, null, replyTo);
+        addMessage(from, message, false, null, replyTo, imageData, imageType);
     } else {
         unreadCounts[from] = (unreadCounts[from] || 0) + 1;
         loadAllUsers();
     }
 });
 
+// CHANGED: also pass m.image_data and m.image_type to addMessage
 socket.on("previousMessages", (messages) => {
     if (chatMode === "group") {
         document.getElementById("messages").innerHTML = "";
-        messages.forEach(m => addMessage(m.user, m.message, m.user === username, m.timestamp, m.reply_to));
+        messages.forEach(m => addMessage(m.user, m.message, m.user === username, m.timestamp, m.reply_to, m.image_data, m.image_type));
     }
 });
 
@@ -180,17 +184,44 @@ socket.on("stopTyping", () => {
 function sendMsg(){
     const msgInput = document.getElementById("msg");
     const msg = msgInput.value.trim();
-    if(!msg) return;
+
+    // CHANGED: read pending image set by the image picker
+    const pendingImage = window._pendingImage;
+
+    // CHANGED: allow send if there's text OR an image (was: text only)
+    if(!msg && !pendingImage) return;
 
     if (chatMode === "group") {
-        socket.emit("message", { text: msg, replyTo: replyingTo });
+        // CHANGED: include imageData + imageType in emitted event
+        socket.emit("message", {
+            text: msg,
+            replyTo: replyingTo,
+            imageData: pendingImage ? pendingImage.data : null,
+            imageType: pendingImage ? pendingImage.type : null
+        });
     } else if (chatMode === "private" && privateChatWith) {
-        socket.emit("privateMessage", { to: privateChatWith, message: msg, replyTo: replyingTo });
-        addMessage(username, msg, true, null, replyingTo);
+        // CHANGED: include imageData + imageType in emitted event
+        socket.emit("privateMessage", {
+            to: privateChatWith,
+            message: msg,
+            replyTo: replyingTo,
+            imageData: pendingImage ? pendingImage.data : null,
+            imageType: pendingImage ? pendingImage.type : null
+        });
+        // CHANGED: optimistic sender render also passes image data
+        addMessage(username, msg, true, null, replyingTo,
+            pendingImage ? pendingImage.data : null,
+            pendingImage ? pendingImage.type : null
+        );
     } else {
         alert("Please select a user to chat with!");
         return;
     }
+
+    // CHANGED: clear pending image and hide preview strip after sending
+    window._pendingImage = null;
+    document.getElementById("image-preview-area").style.display = "none";
+    document.getElementById("image-preview-area").innerHTML = "";
 
     cancelReply();
     socket.emit("stopTyping");
@@ -205,7 +236,8 @@ document.getElementById("msg").addEventListener("input", () => {
     }, 2000);
 });
 
-function addMessage(user, message, isCurrentUser, timestamp = null, replyTo = null) {
+// CHANGED: added imageData + imageType params; builds <img> tag when present
+function addMessage(user, message, isCurrentUser, timestamp = null, replyTo = null, imageData = null, imageType = null) {
     showDateSeparatorIfNeeded(timestamp);
 
     const messagesDiv = document.getElementById("messages");
@@ -223,7 +255,8 @@ function addMessage(user, message, isCurrentUser, timestamp = null, replyTo = nu
     replyBtn.className = "reply-btn";
     replyBtn.innerHTML = "↩";
     replyBtn.title = "Reply";
-    replyBtn.onclick = () => setReply(user, message);
+    // CHANGED: fallback to "[image]" if message is empty (image-only bubble)
+    replyBtn.onclick = () => setReply(user, message || "[image]");
 
     // Message bubble
     const div = document.createElement("div");
@@ -235,9 +268,22 @@ function addMessage(user, message, isCurrentUser, timestamp = null, replyTo = nu
         try { replyData = JSON.parse(replyTo); } catch { replyData = null; }
     }
 
+    // CHANGED: build <img> if imageData present; supports full data-URL or raw base64 from DB
+    let imageHtml = "";
+    if (imageData) {
+        const src = imageData.startsWith("data:")
+            ? imageData
+            : `data:${imageType || "image/png"};base64,${imageData}`;
+        imageHtml = `<div class="msg-image-wrap">
+            <img class="msg-image" src="${src}" alt="image" onclick="openImageFull(this.src)"/>
+        </div>`;
+    }
+
+    // CHANGED: show name-only label when no text (image-only message)
     div.innerHTML = `
         ${replyData ? `<div class="reply-quote">↩ ${replyData.user}: ${replyData.text}</div>` : ""}
-        <span class="msg-text">${user}: ${message}</span>
+        ${message ? `<span class="msg-text">${user}: ${message}</span>` : `<span class="msg-text msg-text-name">${user}</span>`}
+        ${imageHtml}
         <span class="msg-time">${time}</span>
     `;
 
@@ -245,6 +291,18 @@ function addMessage(user, message, isCurrentUser, timestamp = null, replyTo = nu
     wrapper.appendChild(replyBtn);
     messagesDiv.appendChild(wrapper);
     messagesDiv.scrollTop = messagesDiv.scrollHeight;
+}
+
+// NEW: open fullscreen overlay when a message image is clicked
+function openImageFull(src) {
+    const overlay = document.getElementById("image-overlay");
+    document.getElementById("image-overlay-img").src = src;
+    overlay.style.display = "flex";
+}
+
+// NEW: close the fullscreen overlay
+function closeImageOverlay() {
+    document.getElementById("image-overlay").style.display = "none";
 }
 
 function setReply(user, text) {
@@ -258,4 +316,55 @@ function cancelReply() {
     replyingTo = null;
     document.getElementById("reply-box").classList.remove("active");
     document.getElementById("reply-box-text").textContent = "";
+}
+
+// ── NEW: Image picker (everything below is brand new) ─────────────────────
+
+// Triggers the hidden <input type="file"> in chat.html
+function openImagePicker() {
+    document.getElementById("image-file-input").click();
+}
+
+// Reads the selected file and stores it as a pending image
+document.addEventListener("DOMContentLoaded", () => {
+    const fileInput = document.getElementById("image-file-input");
+    if (!fileInput) return;
+
+    fileInput.addEventListener("change", (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        // Reject files over 5MB
+        if (file.size > 5 * 1024 * 1024) {
+            alert("Image too large! Max size is 5MB.");
+            fileInput.value = "";
+            return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+            const dataUrl = ev.target.result;
+
+            // Store globally so sendMsg() can pick it up
+            window._pendingImage = { data: dataUrl, type: file.type };
+
+            // Show thumbnail preview above the input bar
+            const previewArea = document.getElementById("image-preview-area");
+            previewArea.style.display = "flex";
+            previewArea.innerHTML = `
+                <img src="${dataUrl}" style="max-height:80px;max-width:150px;border-radius:8px;"/>
+                <button onclick="cancelImage()" style="margin-left:8px;background:none;border:none;font-size:18px;cursor:pointer;color:#888;">✕</button>
+            `;
+        };
+        reader.readAsDataURL(file);
+        fileInput.value = ""; // reset so same file can be picked again
+    });
+});
+
+// Discards the pending image without sending
+function cancelImage() {
+    window._pendingImage = null;
+    const previewArea = document.getElementById("image-preview-area");
+    previewArea.style.display = "none";
+    previewArea.innerHTML = "";
 }

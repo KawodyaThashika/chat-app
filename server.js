@@ -26,7 +26,7 @@ app.use(session({
     cookie: { maxAge: 1000 * 60 * 60 * 24 }
 }));
 
-// REGISTER
+// REGISTER — unchanged
 app.post("/register", (req, res) => {
     const { username, email, password } = req.body;
 
@@ -47,7 +47,7 @@ app.post("/register", (req, res) => {
     });
 });
 
-// LOGIN
+// LOGIN — unchanged
 app.post("/login", (req, res) => {
     const { email, password } = req.body;
     const sql = "SELECT * FROM users WHERE email=? AND password=?";
@@ -63,12 +63,12 @@ app.post("/login", (req, res) => {
     });
 });
 
-// GET CURRENT USERNAME
+// GET CURRENT USERNAME — unchanged
 app.get("/username", (req, res) => {
     res.json({ username: req.session.username || null });
 });
 
-// GET ALL REGISTERED USERS
+// GET ALL REGISTERED USERS — unchanged
 app.get("/all-users", (req, res) => {
     db.query("SELECT username FROM users", (err, result) => {
         if (err) return res.send([]);
@@ -76,6 +76,7 @@ app.get("/all-users", (req, res) => {
     });
 });
 
+// GET PRIVATE MESSAGE HISTORY — unchanged (SELECT * already returns image_data, image_type once columns exist)
 app.get("/private-messages/:user1/:user2", (req, res) => {
     const { user1, user2 } = req.params;
     const sql = `SELECT * FROM private_messages 
@@ -93,6 +94,7 @@ let users = {};
 
 io.on("connection", (socket) => {
 
+    // unchanged — SELECT * already picks up image_data + image_type once columns exist
     socket.on("join", (username) => {
         socket.username = username;
         users[username] = socket.id;
@@ -105,35 +107,56 @@ io.on("connection", (socket) => {
         });
     });
 
-    // group message
-    socket.on("message", ({ text, replyTo }) => {
+    // ── CHANGED: destructure imageData + imageType from the event ──
+    socket.on("message", ({ text, replyTo, imageData, imageType }) => {
         const user = socket.username;
         if (!user) return;
         const replyJson = replyTo ? JSON.stringify(replyTo) : null;
-        db.query("INSERT INTO messages(user, message, reply_to) VALUES(?,?,?)", [user, text, replyJson], (err) => {
-            if (err) console.log(err);
-        });
-        io.emit("message", { user, text, replyTo });
+
+        // CHANGED: extract image fields (null when no image sent)
+        const imgData = imageData || null;
+        const imgType = imageType || null;
+
+        // CHANGED: INSERT now includes image_data and image_type columns
+        db.query(
+            "INSERT INTO messages(user, message, reply_to, image_data, image_type) VALUES(?,?,?,?,?)",
+            [user, text || "", replyJson, imgData, imgType],
+            (err) => { if (err) console.log(err); }
+        );
+
+        // CHANGED: broadcast now includes imageData + imageType so clients can render the image
+        io.emit("message", { user, text, replyTo, imageData, imageType });
     });
 
-    // private message
-    socket.on("privateMessage", ({ to, message, replyTo }) => {
+    // ── CHANGED: destructure imageData + imageType from the event ──
+    socket.on("privateMessage", ({ to, message, replyTo, imageData, imageType }) => {
         const from = socket.username;
         if (!from) return;
         const replyJson = replyTo ? JSON.stringify(replyTo) : null;
-        db.query("INSERT INTO private_messages(sender, receiver, message, reply_to) VALUES(?,?,?,?)",
-            [from, to, message, replyJson], (err) => {
-                if (err) console.log(err);
-            });
+
+        // CHANGED: extract image fields (null when no image sent)
+        const imgData = imageData || null;
+        const imgType = imageType || null;
+
+        // CHANGED: INSERT now includes image_data and image_type columns
+        db.query(
+            "INSERT INTO private_messages(sender, receiver, message, reply_to, image_data, image_type) VALUES(?,?,?,?,?,?)",
+            [from, to, message || "", replyJson, imgData, imgType],
+            (err) => { if (err) console.log(err); }
+        );
 
         const receiverSocketId = users[to];
+
+        // CHANGED: emit to receiver now includes imageData + imageType
         if (receiverSocketId) {
-            io.to(receiverSocketId).emit("privateMessage", { from, message, replyTo });
+            io.to(receiverSocketId).emit("privateMessage", { from, message, replyTo, imageData, imageType });
         }
-        socket.emit("privateMessage", { from, message, replyTo });
+
+        // CHANGED: echo back to sender also includes imageData + imageType
+        socket.emit("privateMessage", { from, message, replyTo, imageData, imageType });
     });
 
-    // ✅ Typing indicators
+    // ✅ Typing indicators — unchanged
     socket.on("typing", (user) => {
         socket.broadcast.emit("typing", user);
     });
