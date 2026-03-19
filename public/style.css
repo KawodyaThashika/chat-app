@@ -882,6 +882,7 @@ background:#2575fc;
 
 .sidebar-overlay.active {
     display: block;
+    background: rgba(0,0,0,0.6);
 }
 
 /* ══════════════════════════════════════
