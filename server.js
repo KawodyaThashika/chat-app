@@ -14,7 +14,8 @@ const io = new Server(server);
 
 app.use(express.static("public"));
 app.use(bodyParser.urlencoded({ extended: true }));
-app.use(express.json()); // NEW: needed to parse JSON body for /save-message
+// NEW: increased limit to 20mb to handle base64 image data in /save-message requests
+app.use(express.json({ limit: "20mb" }));
 
 // ✅ Store sessions in MySQL
 const sessionStore = new MySQLStore({}, db);
