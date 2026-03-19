@@ -7,8 +7,15 @@ font-family: "Segoe UI", sans-serif;
 
 /* Body background */
 
+/* FIXED: gradient on html+body so it always covers full screen on mobile too */
+html {
+    height: 100%;
+    background: linear-gradient(135deg,#1d2b64,#f8cdda);
+}
+
 body{
-    height:100vh;
+    min-height: 100vh;
+    min-height: 100dvh;
     background: linear-gradient(135deg,#1d2b64,#f8cdda);
     display:flex;
     align-items:center;
@@ -640,7 +647,7 @@ background:#2575fc;
     flex-shrink: 0;
     overflow: hidden;
 }
- 
+
 /* Preview thumbnail — fixed small size so it never crowds the input row */
 .preview-thumb {
     height: 56px;
@@ -649,7 +656,7 @@ background:#2575fc;
     border-radius: 8px;
     flex-shrink: 0;
 }
- 
+
 /* Cancel button next to the preview thumbnail */
 .preview-cancel-btn {
     background: rgba(255,255,255,0.15);
@@ -913,17 +920,15 @@ background:#2575fc;
 
 /* ── Dark overlay behind open sidebar on mobile ── */
 .sidebar-overlay {
-    display: none;
+    display: none;          /* hidden everywhere by default */
     position: fixed;
     inset: 0;
     background: rgba(0,0,0,0.5);
     z-index: 998;
+    /* FIXED: only allowed to show inside the ≤700px media query */
 }
 
-.sidebar-overlay.active {
-    display: block;
-    background: rgba(0,0,0,0.6);
-}
+/* .sidebar-overlay.active only takes effect inside the mobile breakpoint below */
 
 /* ══════════════════════════════════════
    BREAKPOINT 1: Large laptop (≤ 1100px)
@@ -942,18 +947,23 @@ background:#2575fc;
    — narrower sidebar
    ══════════════════════════════════════ */
 @media (max-width: 850px) {
+    body {
+        background: linear-gradient(135deg,#1d2b64,#f8cdda);
+        background-attachment: fixed;
+    }
+
     .chat-container {
         width: 100vw;
         height: 100dvh;
         border-radius: 0;
+        /* FIXED: keep glass effect on tablet */
+        background: rgba(255, 255, 255, 0.12);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
     }
 
     .sidebar {
         width: 200px;
-    }
-
-    .chat-container {
-        border-radius: 0;
     }
 }
 
@@ -966,6 +976,9 @@ background:#2575fc;
     body {
         align-items: flex-start;
         overflow: hidden;
+        /* FIXED: gradient must show behind the glass container on mobile */
+        background: linear-gradient(135deg,#1d2b64,#f8cdda);
+        background-attachment: fixed;
     }
 
     .chat-container {
@@ -973,6 +986,11 @@ background:#2575fc;
         height: 100dvh;
         border-radius: 0;
         position: relative;
+        /* FIXED: keep glass effect — semi-transparent so gradient shows through */
+        background: rgba(255, 255, 255, 0.08);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px); /* Safari support */
+        box-shadow: none;
     }
 
     /* Sidebar becomes a fixed slide-in drawer */
@@ -992,6 +1010,11 @@ background:#2575fc;
 
     .sidebar.open {
         transform: translateX(0);
+    }
+
+    /* FIXED: overlay only activates on mobile */
+    .sidebar-overlay.active {
+        display: block;
     }
 
     /* Show hamburger and close buttons on mobile */
@@ -1093,6 +1116,7 @@ background:#2575fc;
     }
 }
 
+/* ── Input row (image btn + text input + send btn) ── */
 .input-row {
     display: flex;
     align-items: center;
@@ -1100,13 +1124,13 @@ background:#2575fc;
     width: 100%;
     min-width: 0;
 }
- 
+
 /* Text input takes all remaining space but never pushes Send off */
 .input-row input {
     flex: 1;
     min-width: 0;      /* critical — allows flex child to shrink below content size */
 }
- 
+
 /* Send button and image button must NEVER shrink */
 .input-row button {
     flex-shrink: 0;
