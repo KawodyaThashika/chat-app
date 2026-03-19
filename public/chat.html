@@ -40,15 +40,46 @@
             <button onclick="cancelReply()">✕</button>
         </div>
 
+        <!-- ↓ CHANGED: .chat-input now has extra children for image support -->
         <div class="chat-input">
-            <input id="msg" placeholder="Type your message..."
-                   onkeypress="if(event.key==='Enter'){sendMsg();}">
-            <button onclick="sendMsg()">Send</button>
+
+            <!-- NEW: hidden file input, triggered by the image button below -->
+            <input type="file" id="image-file-input" accept="image/*" style="display:none;">
+
+            <!-- NEW: thumbnail preview strip shown above input row when an image is selected -->
+            <div id="image-preview-area" style="display:none; align-items:center; padding:4px 8px; background:#f0f0f0; border-radius:8px; margin-bottom:4px;"></div>
+
+            <!-- CHANGED: original input + Send button now wrapped in a flex div
+                 so the new image button can sit to their left without breaking layout -->
+            <div style="display:flex; align-items:center; gap:6px; width:100%;">
+
+                <!-- NEW: image picker button -->
+                <button class="img-btn" onclick="openImagePicker()" title="Send image">🖼️</button>
+
+                <!-- UNCHANGED -->
+                <input id="msg" placeholder="Type your message..."
+                       onkeypress="if(event.key==='Enter'){sendMsg();}">
+
+                <!-- UNCHANGED -->
+                <button onclick="sendMsg()">Send</button>
+            </div>
+
         </div>
+        <!-- ↑ end of changed .chat-input block -->
+
     </div>
 
 </div>
 
+<!-- NEW: fullscreen overlay — hidden by default, shown when a message image is clicked -->
+<div id="image-overlay"
+     style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.85); z-index:9999; align-items:center; justify-content:center;"
+     onclick="closeImageOverlay()">
+    <img id="image-overlay-img" src=""
+         style="max-width:90vw; max-height:90vh; border-radius:10px; box-shadow:0 4px 30px rgba(0,0,0,0.5);">
+</div>
+
+<!-- UNCHANGED -->
 <script src="/socket.io/socket.io.js"></script>
 <script src="client.js"></script>
 </body>

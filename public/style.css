@@ -220,9 +220,11 @@ transform:translateY(0);
 }
 
 /* Input area */
-
+/* CHANGED: added flex-direction:column so the image preview strip
+   can sit above the input row inside the same .chat-input block */
 .chat-input{
 display:flex;
+flex-direction: column;
 padding:15px;
 background:rgba(0,0,0,0.2);
 flex-shrink: 0;
@@ -598,7 +600,7 @@ background:#2575fc;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    color: rgba(255, 255, 255, 0.9); /* ✅ ADD THIS LINE */
+    color: rgba(255, 255, 255, 0.9); 
 }
 
 
@@ -608,4 +610,54 @@ background:#2575fc;
     border-left-color: rgba(255,255,255,0.6);
     background: rgba(0,0,0,0.2);
     color: #ffffff;
+}
+
+
+/* ═══════════════════════════════════════════════════════════════
+   NEW: Image feature styles — everything below this line is new
+   ═══════════════════════════════════════════════════════════════ */
+
+/* NEW: 🖼️ image picker button that sits left of the text input */
+.img-btn {
+    background: none;
+    border: none;
+    font-size: 22px;
+    cursor: pointer;
+    padding: 0 4px;
+    line-height: 1;
+    flex-shrink: 0;
+    opacity: 0.8;
+    transition: opacity 0.2s;
+}
+.img-btn:hover { opacity: 1; }
+
+/* NEW: wrapper div around the <img> inside a message bubble */
+.msg-image-wrap {
+    margin-top: 6px;
+}
+
+/* NEW: the rendered image inside a chat bubble */
+.msg-image {
+    max-width: 220px;
+    max-height: 220px;
+    border-radius: 10px;
+    display: block;
+    cursor: pointer; /* clicking opens fullscreen overlay */
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    transition: transform 0.15s;
+}
+.msg-image:hover { transform: scale(1.03); }
+
+/* NEW: sender name label shown when a message has an image but no text */
+.msg-text-name {
+    font-weight: 600;
+    font-size: 0.85em;
+    opacity: 0.8;
+    display: block;
+    margin-bottom: 2px;
+}
+
+/* NEW: thumbnail preview strip shown above the input bar when an image is selected */
+#image-preview-area {
+    max-width: 100%;
 }
