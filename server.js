@@ -112,14 +112,15 @@ io.on("connection", (socket) => {
         const user = socket.username;
         if (!user) return;
         const replyJson = replyTo ? JSON.stringify(replyTo) : null;
-        // imageData is base64 string, imageType is mime type e.g. "image/png"
         const imgData = imageData || null;
         const imgType = imageType || null;
         db.query("INSERT INTO messages(user, message, reply_to, image_data, image_type) VALUES(?,?,?,?,?)",
-            [user, text || "", replyJson, imgData, imgType], (err) => {
-            if (err) console.log(err);
+            [user, text || "", replyJson, imgData, imgType], (err, result) => {
+            if (err) { console.log(err); return; }
+            // CHANGED: include the new row's id so clients can reference it for deletion
+            const msgId = result.insertId;
+            io.emit("message", { id: msgId, user, text, replyTo, imageData, imageType });
         });
-        io.emit("message", { user, text, replyTo, imageData, imageType });
     });
 
     // private message
@@ -130,15 +131,16 @@ io.on("connection", (socket) => {
         const imgData = imageData || null;
         const imgType = imageType || null;
         db.query("INSERT INTO private_messages(sender, receiver, message, reply_to, image_data, image_type) VALUES(?,?,?,?,?,?)",
-            [from, to, message || "", replyJson, imgData, imgType], (err) => {
-                if (err) console.log(err);
+            [from, to, message || "", replyJson, imgData, imgType], (err, result) => {
+                if (err) { console.log(err); return; }
+                // CHANGED: include the new row's id so clients can reference it for deletion
+                const msgId = result.insertId;
+                const receiverSocketId = users[to];
+                if (receiverSocketId) {
+                    io.to(receiverSocketId).emit("privateMessage", { id: msgId, from, message, replyTo, imageData, imageType });
+                }
+                socket.emit("privateMessage", { id: msgId, from, message, replyTo, imageData, imageType });
             });
-
-        const receiverSocketId = users[to];
-        if (receiverSocketId) {
-            io.to(receiverSocketId).emit("privateMessage", { from, message, replyTo, imageData, imageType });
-        }
-        socket.emit("privateMessage", { from, message, replyTo, imageData, imageType });
     });
 
     // ✅ Typing indicators
@@ -148,6 +150,33 @@ io.on("connection", (socket) => {
 
     socket.on("stopTyping", () => {
         socket.broadcast.emit("stopTyping");
+    });
+
+    // NEW: Delete a group message for everyone (only the sender can do this)
+    socket.on("deleteMessage", ({ id }) => {
+        const user = socket.username;
+        if (!user) return;
+        // Only delete if the requesting user is the original sender
+        db.query("DELETE FROM messages WHERE id=? AND user=?", [id, user], (err, result) => {
+            if (err || result.affectedRows === 0) return;
+            // Broadcast to all clients to remove this message from their UI
+            io.emit("messageDeleted", { id });
+        });
+    });
+
+    // NEW: Delete a private message for everyone (only the sender can do this)
+    socket.on("deletePrivateMessage", ({ id, to }) => {
+        const user = socket.username;
+        if (!user) return;
+        db.query("DELETE FROM private_messages WHERE id=? AND sender=?", [id, user], (err, result) => {
+            if (err || result.affectedRows === 0) return;
+            // Notify sender and receiver to remove the message
+            socket.emit("privateMessageDeleted", { id });
+            const receiverSocketId = users[to];
+            if (receiverSocketId) {
+                io.to(receiverSocketId).emit("privateMessageDeleted", { id });
+            }
+        });
     });
 
     socket.on("disconnect", () => {
