@@ -220,11 +220,9 @@ transform:translateY(0);
 }
 
 /* Input area */
-/* CHANGED: added flex-direction:column so the image preview strip
-   can sit above the input row inside the same .chat-input block */
+
 .chat-input{
 display:flex;
-flex-direction: column;
 padding:15px;
 background:rgba(0,0,0,0.2);
 flex-shrink: 0;
@@ -600,7 +598,7 @@ background:#2575fc;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    color: rgba(255, 255, 255, 0.9); 
+    color: rgba(255, 255, 255, 0.9); /* ✅ ADD THIS LINE */
 }
 
 
@@ -611,13 +609,7 @@ background:#2575fc;
     background: rgba(0,0,0,0.2);
     color: #ffffff;
 }
-
-
-/* ═══════════════════════════════════════════════════════════════
-   NEW: Image feature styles — everything below this line is new
-   ═══════════════════════════════════════════════════════════════ */
-
-/* NEW: 🖼️ image picker button that sits left of the text input */
+/* ---- Image feature styles ---- */
 .img-btn {
     background: none;
     border: none;
@@ -631,24 +623,20 @@ background:#2575fc;
 }
 .img-btn:hover { opacity: 1; }
 
-/* NEW: wrapper div around the <img> inside a message bubble */
 .msg-image-wrap {
     margin-top: 6px;
 }
-
-/* NEW: the rendered image inside a chat bubble */
 .msg-image {
     max-width: 220px;
     max-height: 220px;
     border-radius: 10px;
     display: block;
-    cursor: pointer; /* clicking opens fullscreen overlay */
+    cursor: pointer;
     box-shadow: 0 2px 8px rgba(0,0,0,0.2);
     transition: transform 0.15s;
 }
 .msg-image:hover { transform: scale(1.03); }
 
-/* NEW: sender name label shown when a message has an image but no text */
 .msg-text-name {
     font-weight: 600;
     font-size: 0.85em;
@@ -657,7 +645,107 @@ background:#2575fc;
     margin-bottom: 2px;
 }
 
-/* NEW: thumbnail preview strip shown above the input bar when an image is selected */
 #image-preview-area {
     max-width: 100%;
+}
+
+
+/* ═══════════════════════════════════════════════════
+   NEW: Saved Messages feature styles
+   ═══════════════════════════════════════════════════ */
+
+/* Card container for each saved message */
+.saved-card {
+    background: rgba(255, 255, 255, 0.12);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 14px;
+    padding: 12px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    animation: fadeIn 0.3s ease;
+    max-width: 480px;
+    align-self: flex-start;
+    backdrop-filter: blur(8px);
+}
+
+/* Top row: sender name, source chat label, delete button */
+.saved-card-meta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+}
+
+.saved-from {
+    font-weight: 700;
+    color: #a78bfa;
+    flex-shrink: 0;
+}
+
+.saved-source {
+    color: rgba(255,255,255,0.45);
+    font-style: italic;
+    flex: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.saved-delete-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 14px;
+    opacity: 0.5;
+    transition: opacity 0.2s;
+    padding: 0;
+    flex-shrink: 0;
+}
+.saved-delete-btn:hover { opacity: 1; }
+
+/* Message text inside the saved card */
+.saved-card-text {
+    color: rgba(255,255,255,0.9);
+    font-size: 14px;
+    line-height: 1.45;
+    word-break: break-word;
+    overflow-wrap: break-word;
+}
+
+/* Timestamp at the bottom of the saved card */
+.saved-card-time {
+    font-size: 11px;
+    color: rgba(255,255,255,0.35);
+    align-self: flex-end;
+}
+
+/* 📌 save button — same shape as reply-btn, appears on hover */
+.save-btn {
+    font-size: 13px;
+}
+
+/* Toast notification (brief "Message saved!" popup) */
+#toast-msg {
+    position: fixed;
+    bottom: 30px;
+    left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    background: rgba(106, 17, 203, 0.9);
+    color: white;
+    padding: 10px 22px;
+    border-radius: 30px;
+    font-size: 14px;
+    font-weight: 500;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s, transform 0.3s;
+    z-index: 10000;
+    white-space: nowrap;
+}
+
+#toast-msg.toast-active {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
 }

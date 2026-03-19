@@ -59,6 +59,8 @@ function switchMode(mode) {
 
     document.getElementById("groupBtn").classList.toggle("active", mode === "group");
     document.getElementById("privateBtn").classList.toggle("active", mode === "private");
+    // NEW: toggle saved button active state
+    document.getElementById("savedBtn").classList.toggle("active", mode === "saved");
 
     const messagesDiv = document.getElementById("messages");
     messagesDiv.innerHTML = "";
@@ -66,6 +68,10 @@ function switchMode(mode) {
     if (mode === "group") {
         document.getElementById("chat-header").textContent = "👥 Group Chat";
         socket.emit("join", username);
+    } else if (mode === "saved") {
+        // NEW: load saved messages view
+        document.getElementById("chat-header").textContent = "📌 Saved Messages";
+        loadSavedMessages();
     } else {
         document.getElementById("chat-header").textContent = "🔒 Select a user to chat";
         messagesDiv.innerHTML = `<div class="info-msg">👈 Select a user from the sidebar to start private chat</div>`;
@@ -89,7 +95,6 @@ function startPrivateChat(targetUser) {
     fetch(`/private-messages/${username}/${targetUser}`)
     .then(res => res.json())
     .then(messages => {
-        // CHANGED: also pass m.image_data and m.image_type to addMessage
         messages.forEach(m => {
             addMessage(m.sender, m.message, m.sender === username, m.timestamp, m.reply_to, m.image_data, m.image_type);
         });
@@ -141,14 +146,12 @@ function loadAllUsers() {
     });
 }
 
-// CHANGED: also pass data.imageData and data.imageType to addMessage
 socket.on("message", (data) => {
     if (chatMode === "group") {
         addMessage(data.user, data.text, data.user === username, null, data.replyTo, data.imageData, data.imageType);
     }
 });
 
-// CHANGED: destructure imageData + imageType from event, pass to addMessage
 socket.on("privateMessage", ({ from, message, replyTo, imageData, imageType }) => {
     if (from === username) return;
     if (chatMode === "private" && from === privateChatWith) {
@@ -159,7 +162,6 @@ socket.on("privateMessage", ({ from, message, replyTo, imageData, imageType }) =
     }
 });
 
-// CHANGED: also pass m.image_data and m.image_type to addMessage
 socket.on("previousMessages", (messages) => {
     if (chatMode === "group") {
         document.getElementById("messages").innerHTML = "";
@@ -185,14 +187,12 @@ function sendMsg(){
     const msgInput = document.getElementById("msg");
     const msg = msgInput.value.trim();
 
-    // CHANGED: read pending image set by the image picker
+    // Check if we have a pending image
     const pendingImage = window._pendingImage;
 
-    // CHANGED: allow send if there's text OR an image (was: text only)
     if(!msg && !pendingImage) return;
 
     if (chatMode === "group") {
-        // CHANGED: include imageData + imageType in emitted event
         socket.emit("message", {
             text: msg,
             replyTo: replyingTo,
@@ -200,7 +200,6 @@ function sendMsg(){
             imageType: pendingImage ? pendingImage.type : null
         });
     } else if (chatMode === "private" && privateChatWith) {
-        // CHANGED: include imageData + imageType in emitted event
         socket.emit("privateMessage", {
             to: privateChatWith,
             message: msg,
@@ -208,17 +207,13 @@ function sendMsg(){
             imageData: pendingImage ? pendingImage.data : null,
             imageType: pendingImage ? pendingImage.type : null
         });
-        // CHANGED: optimistic sender render also passes image data
-        addMessage(username, msg, true, null, replyingTo,
-            pendingImage ? pendingImage.data : null,
-            pendingImage ? pendingImage.type : null
-        );
+        addMessage(username, msg, true, null, replyingTo, pendingImage ? pendingImage.data : null, pendingImage ? pendingImage.type : null);
     } else {
         alert("Please select a user to chat with!");
         return;
     }
 
-    // CHANGED: clear pending image and hide preview strip after sending
+    // Clear pending image
     window._pendingImage = null;
     document.getElementById("image-preview-area").style.display = "none";
     document.getElementById("image-preview-area").innerHTML = "";
@@ -236,7 +231,6 @@ document.getElementById("msg").addEventListener("input", () => {
     }, 2000);
 });
 
-// CHANGED: added imageData + imageType params; builds <img> tag when present
 function addMessage(user, message, isCurrentUser, timestamp = null, replyTo = null, imageData = null, imageType = null) {
     showDateSeparatorIfNeeded(timestamp);
 
@@ -255,8 +249,14 @@ function addMessage(user, message, isCurrentUser, timestamp = null, replyTo = nu
     replyBtn.className = "reply-btn";
     replyBtn.innerHTML = "↩";
     replyBtn.title = "Reply";
-    // CHANGED: fallback to "[image]" if message is empty (image-only bubble)
     replyBtn.onclick = () => setReply(user, message || "[image]");
+
+    // NEW: Save/forward button — pins this message to the user's Saved Messages
+    const saveBtn = document.createElement("button");
+    saveBtn.className = "reply-btn save-btn";
+    saveBtn.innerHTML = "📌";
+    saveBtn.title = "Save message";
+    saveBtn.onclick = () => saveMessage(user, message, imageData, imageType);
 
     // Message bubble
     const div = document.createElement("div");
@@ -268,18 +268,13 @@ function addMessage(user, message, isCurrentUser, timestamp = null, replyTo = nu
         try { replyData = JSON.parse(replyTo); } catch { replyData = null; }
     }
 
-    // CHANGED: build <img> if imageData present; supports full data-URL or raw base64 from DB
+    // Build image HTML if present
     let imageHtml = "";
     if (imageData) {
-        const src = imageData.startsWith("data:")
-            ? imageData
-            : `data:${imageType || "image/png"};base64,${imageData}`;
-        imageHtml = `<div class="msg-image-wrap">
-            <img class="msg-image" src="${src}" alt="image" onclick="openImageFull(this.src)"/>
-        </div>`;
+        const src = imageData.startsWith("data:") ? imageData : `data:${imageType || "image/png"};base64,${imageData}`;
+        imageHtml = `<div class="msg-image-wrap"><img class="msg-image" src="${src}" alt="image" onclick="openImageFull(this.src)"/></div>`;
     }
 
-    // CHANGED: show name-only label when no text (image-only message)
     div.innerHTML = `
         ${replyData ? `<div class="reply-quote">↩ ${replyData.user}: ${replyData.text}</div>` : ""}
         ${message ? `<span class="msg-text">${user}: ${message}</span>` : `<span class="msg-text msg-text-name">${user}</span>`}
@@ -289,18 +284,17 @@ function addMessage(user, message, isCurrentUser, timestamp = null, replyTo = nu
 
     wrapper.appendChild(div);
     wrapper.appendChild(replyBtn);
+    wrapper.appendChild(saveBtn); // NEW: save button sits next to reply button
     messagesDiv.appendChild(wrapper);
     messagesDiv.scrollTop = messagesDiv.scrollHeight;
 }
 
-// NEW: open fullscreen overlay when a message image is clicked
 function openImageFull(src) {
     const overlay = document.getElementById("image-overlay");
     document.getElementById("image-overlay-img").src = src;
     overlay.style.display = "flex";
 }
 
-// NEW: close the fullscreen overlay
 function closeImageOverlay() {
     document.getElementById("image-overlay").style.display = "none";
 }
@@ -317,54 +311,159 @@ function cancelReply() {
     document.getElementById("reply-box").classList.remove("active");
     document.getElementById("reply-box-text").textContent = "";
 }
-
-// ── NEW: Image picker (everything below is brand new) ─────────────────────
-
-// Triggers the hidden <input type="file"> in chat.html
+// ---- Image picker ----
 function openImagePicker() {
     document.getElementById("image-file-input").click();
 }
 
-// Reads the selected file and stores it as a pending image
 document.addEventListener("DOMContentLoaded", () => {
     const fileInput = document.getElementById("image-file-input");
-    if (!fileInput) return;
+    if (fileInput) {
+        fileInput.addEventListener("change", (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
 
-    fileInput.addEventListener("change", (e) => {
-        const file = e.target.files[0];
-        if (!file) return;
+            // Max 5MB
+            if (file.size > 5 * 1024 * 1024) {
+                alert("Image too large! Max size is 5MB.");
+                fileInput.value = "";
+                return;
+            }
 
-        // Reject files over 5MB
-        if (file.size > 5 * 1024 * 1024) {
-            alert("Image too large! Max size is 5MB.");
+            const reader = new FileReader();
+            reader.onload = (ev) => {
+                const dataUrl = ev.target.result;
+                // Store as pending image
+                window._pendingImage = { data: dataUrl, type: file.type };
+
+                // Show preview
+                const previewArea = document.getElementById("image-preview-area");
+                previewArea.style.display = "flex";
+                previewArea.innerHTML = `
+                    <img src="${dataUrl}" style="max-height:80px;max-width:150px;border-radius:8px;"/>
+                    <button onclick="cancelImage()" style="margin-left:8px;background:none;border:none;font-size:18px;cursor:pointer;color:#888;">✕</button>
+                `;
+            };
+            reader.readAsDataURL(file);
             fileInput.value = "";
-            return;
-        }
-
-        const reader = new FileReader();
-        reader.onload = (ev) => {
-            const dataUrl = ev.target.result;
-
-            // Store globally so sendMsg() can pick it up
-            window._pendingImage = { data: dataUrl, type: file.type };
-
-            // Show thumbnail preview above the input bar
-            const previewArea = document.getElementById("image-preview-area");
-            previewArea.style.display = "flex";
-            previewArea.innerHTML = `
-                <img src="${dataUrl}" style="max-height:80px;max-width:150px;border-radius:8px;"/>
-                <button onclick="cancelImage()" style="margin-left:8px;background:none;border:none;font-size:18px;cursor:pointer;color:#888;">✕</button>
-            `;
-        };
-        reader.readAsDataURL(file);
-        fileInput.value = ""; // reset so same file can be picked again
-    });
+        });
+    }
 });
 
-// Discards the pending image without sending
 function cancelImage() {
     window._pendingImage = null;
     const previewArea = document.getElementById("image-preview-area");
     previewArea.style.display = "none";
     previewArea.innerHTML = "";
+}
+
+
+// ── NEW: Saved Messages feature ───────────────────────────────────────────
+
+// Save a message to the server (called by the 📌 button)
+function saveMessage(user, message, imageData, imageType) {
+    const source = chatMode === "group"
+        ? "Group Chat"
+        : (privateChatWith ? `Private: ${privateChatWith}` : "");
+
+    fetch("/save-message", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+            original_user: user,
+            message: message || "",
+            image_data: imageData || null,
+            image_type: imageType || null,
+            source_chat: source
+        })
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.ok) showToast("📌 Message saved!");
+    })
+    .catch(() => showToast("Failed to save"));
+}
+
+// Load and render all saved messages
+function loadSavedMessages() {
+    const messagesDiv = document.getElementById("messages");
+    messagesDiv.innerHTML = `<div class="info-msg" style="margin-top:20px;">Loading...</div>`;
+
+    fetch("/saved-messages")
+    .then(res => res.json())
+    .then(items => {
+        messagesDiv.innerHTML = "";
+
+        if (items.length === 0) {
+            messagesDiv.innerHTML = `<div class="info-msg">📌 No saved messages yet.<br>Hover any message and click 📌 to save it.</div>`;
+            return;
+        }
+
+        items.forEach(item => {
+            addSavedItem(item);
+        });
+    });
+}
+
+// Render a single saved message card
+function addSavedItem(item) {
+    const messagesDiv = document.getElementById("messages");
+
+    const card = document.createElement("div");
+    card.className = "saved-card";
+    card.dataset.id = item.id;
+
+    const time = item.saved_at
+        ? new Date(item.saved_at).toLocaleString([], { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })
+        : "";
+
+    let imageHtml = "";
+    if (item.image_data) {
+        const src = item.image_data.startsWith("data:")
+            ? item.image_data
+            : `data:${item.image_type || "image/png"};base64,${item.image_data}`;
+        imageHtml = `<div class="msg-image-wrap"><img class="msg-image" src="${src}" alt="image" onclick="openImageFull(this.src)"/></div>`;
+    }
+
+    card.innerHTML = `
+        <div class="saved-card-meta">
+            <span class="saved-from">✉️ ${item.original_user}</span>
+            <span class="saved-source">${item.source_chat || ""}</span>
+            <button class="saved-delete-btn" onclick="deleteSavedMessage(${item.id}, this)" title="Remove">🗑️</button>
+        </div>
+        ${item.message ? `<div class="saved-card-text">${item.message}</div>` : ""}
+        ${imageHtml}
+        <div class="saved-card-time">${time}</div>
+    `;
+
+    messagesDiv.appendChild(card);
+}
+
+// Delete a saved message
+function deleteSavedMessage(id, btn) {
+    fetch(`/saved-messages/${id}`, { method: "DELETE" })
+    .then(res => res.json())
+    .then(data => {
+        if (data.ok) {
+            const card = btn.closest(".saved-card");
+            card.style.opacity = "0";
+            card.style.transform = "scale(0.95)";
+            card.style.transition = "all 0.2s";
+            setTimeout(() => card.remove(), 200);
+        }
+    });
+}
+
+// Brief toast notification
+function showToast(msg) {
+    let toast = document.getElementById("toast-msg");
+    if (!toast) {
+        toast = document.createElement("div");
+        toast.id = "toast-msg";
+        document.body.appendChild(toast);
+    }
+    toast.textContent = msg;
+    toast.className = "toast-active";
+    clearTimeout(window._toastTimer);
+    window._toastTimer = setTimeout(() => { toast.className = ""; }, 2500);
 }
