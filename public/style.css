@@ -974,11 +974,16 @@ background:#2575fc;
 @media (max-width: 700px) {
 
     body {
-        align-items: flex-start;
+        /* FIXED: keep center alignment — login/register boxes stay centered */
+        /* align-items stays as center (default) for login/register pages */
         overflow: hidden;
-        /* FIXED: gradient must show behind the glass container on mobile */
         background: linear-gradient(135deg,#1d2b64,#f8cdda);
         background-attachment: fixed;
+    }
+
+    /* Only push to top on chat page (where .chat-container exists) */
+    body:has(.chat-container) {
+        align-items: flex-start;
     }
 
     .chat-container {
@@ -1108,6 +1113,16 @@ background:#2575fc;
 }
 
 /* ── Login / Register form responsive ── */
+@media (max-width: 700px) {
+    /* FIXED: force login/register box to stay centered on all mobile screens */
+    .login-container {
+        position: relative;
+        margin: auto;
+        width: 88vw;
+        max-width: 380px;
+    }
+}
+
 @media (max-width: 480px) {
     .login-container {
         width: 92vw;
