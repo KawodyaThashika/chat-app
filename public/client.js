@@ -377,11 +377,15 @@ function saveMessage(user, message, imageData, imageType) {
             source_chat: source
         })
     })
-    .then(res => res.json())
+    .then(res => {
+        if (!res.ok) throw new Error("Server error: " + res.status);
+        return res.json();
+    })
     .then(data => {
         if (data.ok) showToast("📌 Message saved!");
+        else showToast("❌ " + (data.error || "Failed to save"));
     })
-    .catch(() => showToast("Failed to save"));
+    .catch(err => showToast("❌ " + err.message));
 }
 
 // Load and render all saved messages
