@@ -96,7 +96,8 @@ function startPrivateChat(targetUser) {
     .then(res => res.json())
     .then(messages => {
         messages.forEach(m => {
-            addMessage(m.sender, m.message, m.sender === username, m.timestamp, m.reply_to, m.image_data, m.image_type);
+            // CHANGED: pass m.id, chatType and peer for delete targeting
+            addMessage(m.sender, m.message, m.sender === username, m.timestamp, m.reply_to, m.image_data, m.image_type, m.id, "private", targetUser);
         });
     });
 }
@@ -148,14 +149,16 @@ function loadAllUsers() {
 
 socket.on("message", (data) => {
     if (chatMode === "group") {
-        addMessage(data.user, data.text, data.user === username, null, data.replyTo, data.imageData, data.imageType);
+        // CHANGED: pass data.id, chatType for delete button
+        addMessage(data.user, data.text, data.user === username, null, data.replyTo, data.imageData, data.imageType, data.id, "group", null);
     }
 });
 
-socket.on("privateMessage", ({ from, message, replyTo, imageData, imageType }) => {
+socket.on("privateMessage", ({ id, from, message, replyTo, imageData, imageType }) => {
     if (from === username) return;
     if (chatMode === "private" && from === privateChatWith) {
-        addMessage(from, message, false, null, replyTo, imageData, imageType);
+        // CHANGED: pass id, chatType and sender for delete button
+        addMessage(from, message, false, null, replyTo, imageData, imageType, id, "private", from);
     } else {
         unreadCounts[from] = (unreadCounts[from] || 0) + 1;
         loadAllUsers();
@@ -165,7 +168,8 @@ socket.on("privateMessage", ({ from, message, replyTo, imageData, imageType }) =
 socket.on("previousMessages", (messages) => {
     if (chatMode === "group") {
         document.getElementById("messages").innerHTML = "";
-        messages.forEach(m => addMessage(m.user, m.message, m.user === username, m.timestamp, m.reply_to, m.image_data, m.image_type));
+        // CHANGED: pass m.id and chatType for delete button
+        messages.forEach(m => addMessage(m.user, m.message, m.user === username, m.timestamp, m.reply_to, m.image_data, m.image_type, m.id, "group", null));
     }
 });
 
@@ -207,7 +211,8 @@ function sendMsg(){
             imageData: pendingImage ? pendingImage.data : null,
             imageType: pendingImage ? pendingImage.type : null
         });
-        addMessage(username, msg, true, null, replyingTo, pendingImage ? pendingImage.data : null, pendingImage ? pendingImage.type : null);
+        // CHANGED: id is null until server echoes back; delete-for-me still works locally via wrapper removal
+        addMessage(username, msg, true, null, replyingTo, pendingImage ? pendingImage.data : null, pendingImage ? pendingImage.type : null, null, "private", privateChatWith);
     } else {
         alert("Please select a user to chat with!");
         return;
@@ -231,7 +236,8 @@ document.getElementById("msg").addEventListener("input", () => {
     }, 2000);
 });
 
-function addMessage(user, message, isCurrentUser, timestamp = null, replyTo = null, imageData = null, imageType = null) {
+// CHANGED: added msgId, chatType, chatPeer params for delete functionality
+function addMessage(user, message, isCurrentUser, timestamp = null, replyTo = null, imageData = null, imageType = null, msgId = null, chatType = "group", chatPeer = null) {
     showDateSeparatorIfNeeded(timestamp);
 
     const messagesDiv = document.getElementById("messages");
@@ -243,6 +249,11 @@ function addMessage(user, message, isCurrentUser, timestamp = null, replyTo = nu
     // Wrapper div
     const wrapper = document.createElement("div");
     wrapper.className = isCurrentUser ? "message-wrapper sent-wrapper" : "message-wrapper";
+    // CHANGED: store id and meta on the element for delete operations
+    if (msgId) wrapper.dataset.id = msgId;
+    wrapper.dataset.user = user;
+    wrapper.dataset.chatType = chatType;
+    if (chatPeer) wrapper.dataset.chatPeer = chatPeer;
 
     // Reply button
     const replyBtn = document.createElement("button");
@@ -257,6 +268,16 @@ function addMessage(user, message, isCurrentUser, timestamp = null, replyTo = nu
     saveBtn.innerHTML = "📌";
     saveBtn.title = "Save message";
     saveBtn.onclick = () => saveMessage(user, message, imageData, imageType);
+
+    // NEW: Delete button — shows a dropdown with "Delete for me" / "Delete for everyone"
+    const delBtn = document.createElement("button");
+    delBtn.className = "reply-btn del-btn";
+    delBtn.innerHTML = "🗑️";
+    delBtn.title = "Delete message";
+    delBtn.onclick = (e) => {
+        e.stopPropagation();
+        showDeleteMenu(delBtn, wrapper, isCurrentUser, msgId, chatType, chatPeer);
+    };
 
     // Message bubble
     const div = document.createElement("div");
@@ -284,7 +305,8 @@ function addMessage(user, message, isCurrentUser, timestamp = null, replyTo = nu
 
     wrapper.appendChild(div);
     wrapper.appendChild(replyBtn);
-    wrapper.appendChild(saveBtn); // NEW: save button sits next to reply button
+    wrapper.appendChild(saveBtn);
+    wrapper.appendChild(delBtn); // NEW: delete button
     messagesDiv.appendChild(wrapper);
     messagesDiv.scrollTop = messagesDiv.scrollHeight;
 }
@@ -471,3 +493,77 @@ function showToast(msg) {
     clearTimeout(window._toastTimer);
     window._toastTimer = setTimeout(() => { toast.className = ""; }, 2500);
 }
+
+
+// ── NEW: Delete message feature ───────────────────────────────────────────
+
+// Shows the delete dropdown near the clicked button
+function showDeleteMenu(btn, wrapper, isCurrentUser, msgId, chatType, chatPeer) {
+    // Remove any existing open menu
+    const existing = document.getElementById("delete-menu");
+    if (existing) existing.remove();
+
+    const menu = document.createElement("div");
+    menu.id = "delete-menu";
+    menu.className = "delete-menu";
+
+    // "Delete for me" — always available, just removes from local UI
+    const forMe = document.createElement("button");
+    forMe.textContent = "🙈 Delete for me";
+    forMe.onclick = () => {
+        wrapper.style.opacity = "0";
+        wrapper.style.transform = "scale(0.95)";
+        wrapper.style.transition = "all 0.2s";
+        setTimeout(() => wrapper.remove(), 200);
+        menu.remove();
+    };
+    menu.appendChild(forMe);
+
+    // "Delete for everyone" — only shown to the original sender and only if we have a DB id
+    if (isCurrentUser && msgId) {
+        const forAll = document.createElement("button");
+        forAll.textContent = "🗑️ Delete for everyone";
+        forAll.onclick = () => {
+            if (chatType === "group") {
+                socket.emit("deleteMessage", { id: msgId });
+            } else {
+                socket.emit("deletePrivateMessage", { id: msgId, to: chatPeer });
+            }
+            menu.remove();
+        };
+        menu.appendChild(forAll);
+    }
+
+    // Position menu near the button
+    document.body.appendChild(menu);
+    const rect = btn.getBoundingClientRect();
+    menu.style.top  = (rect.bottom + window.scrollY + 4) + "px";
+    menu.style.left = (rect.left  + window.scrollX - menu.offsetWidth + btn.offsetWidth) + "px";
+
+    // Close menu when clicking anywhere else
+    setTimeout(() => {
+        document.addEventListener("click", () => menu.remove(), { once: true });
+    }, 0);
+}
+
+// NEW: Remove a group message from the UI when server confirms deletion
+socket.on("messageDeleted", ({ id }) => {
+    const wrapper = document.querySelector(`.message-wrapper[data-id="${id}"]`);
+    if (wrapper) {
+        wrapper.style.opacity = "0";
+        wrapper.style.transform = "scale(0.95)";
+        wrapper.style.transition = "all 0.2s";
+        setTimeout(() => wrapper.remove(), 200);
+    }
+});
+
+// NEW: Remove a private message from the UI when server confirms deletion
+socket.on("privateMessageDeleted", ({ id }) => {
+    const wrapper = document.querySelector(`.message-wrapper[data-id="${id}"]`);
+    if (wrapper) {
+        wrapper.style.opacity = "0";
+        wrapper.style.transform = "scale(0.95)";
+        wrapper.style.transition = "all 0.2s";
+        setTimeout(() => wrapper.remove(), 200);
+    }
+});
