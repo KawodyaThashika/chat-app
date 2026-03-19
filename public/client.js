@@ -406,7 +406,7 @@ function loadSavedMessages() {
         messagesDiv.innerHTML = "";
 
         if (items.length === 0) {
-            messagesDiv.innerHTML = `<div class="info-msg">📌 No saved messages yet.<br>Hover any message and click 📌 to save it.</div>`;
+            messagesDiv.innerHTML = `<div class="info-msg">📌 No saved messages yet.</div>`;
             return;
         }
 
