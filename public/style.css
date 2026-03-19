@@ -512,26 +512,8 @@ background:#2575fc;
 }
 
 /* Reply button on hover */
-.reply-btn {
-    background: rgba(255,255,255,0.2);
-    border: none;
-    border-radius: 50%;
-    width: 30px;
-    height: 30px;
-    cursor: pointer;
-    font-size: 14px;
-    opacity: 0;
-    transition: opacity 0.2s;
-    flex-shrink: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    backdrop-filter: blur(5px);
-}
-
-.message-wrapper:hover .reply-btn {
-    opacity: 1;
-}
+/* CHANGED: old floating reply/save/del buttons removed — replaced by ⋮ in-bubble menu */
+/* .reply-btn styles intentionally removed */
 
 /* Reply preview box above input */
 #reply-box {
@@ -720,10 +702,7 @@ background:#2575fc;
     align-self: flex-end;
 }
 
-/* 📌 save button — same shape as reply-btn, appears on hover */
-.save-btn {
-    font-size: 13px;
-}
+/* CHANGED: .save-btn removed — now inside ⋮ dropdown */
 
 /* Toast notification (brief "Message saved!" popup) */
 #toast-msg {
@@ -755,10 +734,7 @@ background:#2575fc;
    NEW: Delete message feature styles
    ═══════════════════════════════════════════════════ */
 
-/* 🗑️ delete button — same shape as reply/save buttons, appears on hover */
-.del-btn {
-    font-size: 13px;
-}
+/* CHANGED: .del-btn removed — now inside ⋮ dropdown */
 
 /* Dropdown menu that appears when 🗑️ is clicked */
 .delete-menu {
@@ -792,12 +768,60 @@ background:#2575fc;
     background: rgba(255,255,255,0.1);
 }
 
-/* "Delete for everyone" is red to signal it's destructive */
-.delete-menu button:last-child {
+/* "Delete for everyone" is red — uses explicit class so position doesn't matter */
+.delete-menu button.delete-for-all {
     color: #f87171;
     border-top: 1px solid rgba(255,255,255,0.08);
 }
 
-.delete-menu button:last-child:hover {
+.delete-menu button.delete-for-all:hover {
     background: rgba(248, 113, 113, 0.12);
+}
+
+
+/* ═══════════════════════════════════════════════════
+   NEW: ⋮ in-bubble menu button styles
+   ═══════════════════════════════════════════════════ */
+
+/* ⋮ button sits in the top-right corner of every message bubble */
+.msg-menu-btn {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    background: none;
+    border: none;
+    color: rgba(255,255,255,0.6);
+    font-size: 16px;
+    font-weight: bold;
+    line-height: 1;
+    cursor: pointer;
+    padding: 2px 5px;
+    border-radius: 6px;
+    opacity: 0;
+    transition: opacity 0.15s, background 0.15s;
+    z-index: 2;
+}
+
+/* On received bubbles use a darker tint so it shows on light background */
+#messages .message .msg-menu-btn {
+    color: rgba(30, 20, 50, 0.5);
+}
+
+/* Show the button when hovering the bubble */
+#messages .sent:hover .msg-menu-btn,
+#messages .message:hover .msg-menu-btn {
+    opacity: 1;
+}
+
+.msg-menu-btn:hover {
+    background: rgba(255,255,255,0.15);
+    opacity: 1;
+}
+
+/* Bubbles need position:relative so the absolute ⋮ button sits inside them */
+#messages .sent,
+#messages .message {
+    position: relative;
+    /* Add a little right padding so text doesn't flow under the ⋮ button */
+    padding-right: 22px;
 }

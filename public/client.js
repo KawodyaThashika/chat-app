@@ -255,29 +255,8 @@ function addMessage(user, message, isCurrentUser, timestamp = null, replyTo = nu
     wrapper.dataset.chatType = chatType;
     if (chatPeer) wrapper.dataset.chatPeer = chatPeer;
 
-    // Reply button
-    const replyBtn = document.createElement("button");
-    replyBtn.className = "reply-btn";
-    replyBtn.innerHTML = "↩";
-    replyBtn.title = "Reply";
-    replyBtn.onclick = () => setReply(user, message || "[image]");
-
-    // NEW: Save/forward button — pins this message to the user's Saved Messages
-    const saveBtn = document.createElement("button");
-    saveBtn.className = "reply-btn save-btn";
-    saveBtn.innerHTML = "📌";
-    saveBtn.title = "Save message";
-    saveBtn.onclick = () => saveMessage(user, message, imageData, imageType);
-
-    // NEW: Delete button — shows a dropdown with "Delete for me" / "Delete for everyone"
-    const delBtn = document.createElement("button");
-    delBtn.className = "reply-btn del-btn";
-    delBtn.innerHTML = "🗑️";
-    delBtn.title = "Delete message";
-    delBtn.onclick = (e) => {
-        e.stopPropagation();
-        showDeleteMenu(delBtn, wrapper, isCurrentUser, msgId, chatType, chatPeer);
-    };
+    // CHANGED: replaced 3 separate floating buttons with a single ⋮ menu button
+    // inside the bubble's top-right corner (WhatsApp/Telegram style)
 
     // Message bubble
     const div = document.createElement("div");
@@ -296,17 +275,23 @@ function addMessage(user, message, isCurrentUser, timestamp = null, replyTo = nu
         imageHtml = `<div class="msg-image-wrap"><img class="msg-image" src="${src}" alt="image" onclick="openImageFull(this.src)"/></div>`;
     }
 
+    // CHANGED: ⋮ menu button injected inside the bubble (top-right corner)
     div.innerHTML = `
+        <button class="msg-menu-btn" title="Options">⋮</button>
         ${replyData ? `<div class="reply-quote">↩ ${replyData.user}: ${replyData.text}</div>` : ""}
         ${message ? `<span class="msg-text">${user}: ${message}</span>` : `<span class="msg-text msg-text-name">${user}</span>`}
         ${imageHtml}
         <span class="msg-time">${time}</span>
     `;
 
+    // Attach the dropdown to the ⋮ button after innerHTML is set
+    const menuBtn = div.querySelector(".msg-menu-btn");
+    menuBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        showMsgMenu(menuBtn, wrapper, isCurrentUser, msgId, chatType, chatPeer, user, message, imageData, imageType);
+    });
+
     wrapper.appendChild(div);
-    wrapper.appendChild(replyBtn);
-    wrapper.appendChild(saveBtn);
-    wrapper.appendChild(delBtn); // NEW: delete button
     messagesDiv.appendChild(wrapper);
     messagesDiv.scrollTop = messagesDiv.scrollHeight;
 }
@@ -497,19 +482,31 @@ function showToast(msg) {
 
 // ── NEW: Delete message feature ───────────────────────────────────────────
 
-// Shows the delete dropdown near the clicked button
-function showDeleteMenu(btn, wrapper, isCurrentUser, msgId, chatType, chatPeer) {
-    // Remove any existing open menu
-    const existing = document.getElementById("delete-menu");
+// CHANGED: unified ⋮ dropdown — Reply, Save, Delete for me, Delete for everyone
+function showMsgMenu(btn, wrapper, isCurrentUser, msgId, chatType, chatPeer, user, message, imageData, imageType) {
+    // Remove any already-open menu
+    const existing = document.getElementById("msg-menu");
     if (existing) existing.remove();
 
     const menu = document.createElement("div");
-    menu.id = "delete-menu";
+    menu.id = "msg-menu";
     menu.className = "delete-menu";
 
-    // "Delete for me" — always available, just removes from local UI
+    // ── Reply ──
+    const replyItem = document.createElement("button");
+    replyItem.innerHTML = "↩&nbsp; Reply";
+    replyItem.onclick = () => { setReply(user, message || "[image]"); menu.remove(); };
+    menu.appendChild(replyItem);
+
+    // ── Save ──
+    const saveItem = document.createElement("button");
+    saveItem.innerHTML = "📌&nbsp; Save message";
+    saveItem.onclick = () => { saveMessage(user, message, imageData, imageType); menu.remove(); };
+    menu.appendChild(saveItem);
+
+    // ── Delete for me (always available) ──
     const forMe = document.createElement("button");
-    forMe.textContent = "🙈 Delete for me";
+    forMe.innerHTML = "🙈&nbsp; Delete for me";
     forMe.onclick = () => {
         wrapper.style.opacity = "0";
         wrapper.style.transform = "scale(0.95)";
@@ -519,10 +516,11 @@ function showDeleteMenu(btn, wrapper, isCurrentUser, msgId, chatType, chatPeer) 
     };
     menu.appendChild(forMe);
 
-    // "Delete for everyone" — only shown to the original sender and only if we have a DB id
+    // ── Delete for everyone (only sender, only if DB id exists) ──
     if (isCurrentUser && msgId) {
         const forAll = document.createElement("button");
-        forAll.textContent = "🗑️ Delete for everyone";
+        forAll.innerHTML = "🗑️&nbsp; Delete for everyone";
+        forAll.classList.add("delete-for-all");
         forAll.onclick = () => {
             if (chatType === "group") {
                 socket.emit("deleteMessage", { id: msgId });
@@ -534,13 +532,16 @@ function showDeleteMenu(btn, wrapper, isCurrentUser, msgId, chatType, chatPeer) 
         menu.appendChild(forAll);
     }
 
-    // Position menu near the button
+    // Position: just below the ⋮ button, aligned to its right edge
     document.body.appendChild(menu);
     const rect = btn.getBoundingClientRect();
+    const menuW = menu.offsetWidth;
+    let left = rect.right - menuW;
+    if (left < 4) left = 4;
     menu.style.top  = (rect.bottom + window.scrollY + 4) + "px";
-    menu.style.left = (rect.left  + window.scrollX - menu.offsetWidth + btn.offsetWidth) + "px";
+    menu.style.left = left + "px";
 
-    // Close menu when clicking anywhere else
+    // Close when clicking anywhere else
     setTimeout(() => {
         document.addEventListener("click", () => menu.remove(), { once: true });
     }, 0);
