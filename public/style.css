@@ -1020,6 +1020,7 @@ background:#2575fc;
     /* FIXED: overlay only activates on mobile */
     .sidebar-overlay.active {
         display: block;
+        background: rgba(0,0,0,0.6);
     }
 
     /* Show hamburger and close buttons on mobile */
