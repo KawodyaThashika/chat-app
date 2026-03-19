@@ -347,8 +347,8 @@ document.addEventListener("DOMContentLoaded", () => {
                 const previewArea = document.getElementById("image-preview-area");
                 previewArea.style.display = "flex";
                 previewArea.innerHTML = `
-                    <img src="${dataUrl}" style="max-height:80px;max-width:150px;border-radius:8px;"/>
-                    <button onclick="cancelImage()" style="margin-left:8px;background:none;border:none;font-size:18px;cursor:pointer;color:#888;">✕</button>
+                    <img src="${dataUrl}" class="preview-thumb"/>
+                    <button class="preview-cancel-btn" onclick="cancelImage()">✕</button>
                 `;
             };
             reader.readAsDataURL(file);
@@ -573,6 +573,8 @@ socket.on("privateMessageDeleted", ({ id }) => {
 // ── NEW: Mobile sidebar open/close ───────────────────────────────────────
 
 function openSidebar() {
+    // FIXED: only open as drawer on mobile; on desktop sidebar is always visible
+    if (!window.matchMedia("(max-width: 700px)").matches) return;
     document.getElementById("sidebar").classList.add("open");
     document.getElementById("sidebar-overlay").classList.add("active");
 }
