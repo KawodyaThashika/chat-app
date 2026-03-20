@@ -1,3 +1,12 @@
+:root {
+  --dark-navy: #181A2F;
+  --navy: #242E49;
+  --slate: #37415C;
+  --peach: #FDA481;
+  --crimson: #B4182D;
+  --burgundy: #54162B;
+}
+
 *{
 margin:0;
 padding:0;
@@ -5,18 +14,15 @@ box-sizing:border-box;
 font-family: "Segoe UI", sans-serif;
 }
 
-/* Body background */
-
-/* FIXED: gradient on html+body so it always covers full screen on mobile too */
 html {
     height: 100%;
-    background: linear-gradient(135deg,#1d2b64,#f8cdda);
+    background: linear-gradient(135deg, #181A2F 0%, #54162B 60%, #FDA481 100%);
 }
 
 body{
     min-height: 100vh;
     min-height: 100dvh;
-    background: linear-gradient(135deg,#1d2b64,#f8cdda);
+    background: linear-gradient(135deg, #181A2F 0%, #54162B 60%, #FDA481 100%);
     display:flex;
     align-items:center;
     justify-content:center;
@@ -24,114 +30,53 @@ body{
     font-family: "Segoe UI", sans-serif;
 }
 
-/* Floating bubbles (anti-gravity effect) */
-
 .background span{
     position:absolute;
     display:block;
     width:20px;
     height:20px;
-    background:rgba(255,255,255,0.2);
+    background:rgba(253, 164, 129, 0.12);
     animation:float 12s linear infinite;
     border-radius:50%;
 }
 
-
-.background span:nth-child(1){
-left:10%;
-animation-duration:15s;
-width:60px;
-height:60px;
-}
-
-.background span:nth-child(2){
-left:40%;
-animation-duration:25s;
-}
-
-.background span:nth-child(3){
-left:70%;
-animation-duration:15s;
-width:40px;
-height:40px;
-}
-
-.background span:nth-child(4){
-left:85%;
-animation-duration:19s;
-}
-
-.background span:nth-child(5){
-    left:15%;
-    width:50px;
-    height:50px;
-    animation-duration:20s;
-}
-
-.background span:nth-child(6){
-    left:30%;
-    width:30px;
-    height:30px;
-    animation-duration:17s;
-}
-
-.background span:nth-child(7){
-    left:55%;
-    width:70px;
-    height:70px;
-    animation-duration:22s;
-}
-
-.background span:nth-child(8){
-    left:90%;
-    width:40px;
-    height:40px;
-    animation-duration:19s;
-}
+.background span:nth-child(1){ left:10%; animation-duration:15s; width:60px; height:60px; }
+.background span:nth-child(2){ left:40%; animation-duration:25s; }
+.background span:nth-child(3){ left:70%; animation-duration:15s; width:40px; height:40px; }
+.background span:nth-child(4){ left:85%; animation-duration:19s; }
+.background span:nth-child(5){ left:15%; width:50px; height:50px; animation-duration:20s; }
+.background span:nth-child(6){ left:30%; width:30px; height:30px; animation-duration:17s; }
+.background span:nth-child(7){ left:55%; width:70px; height:70px; animation-duration:22s; }
+.background span:nth-child(8){ left:90%; width:40px; height:40px; animation-duration:19s; }
 
 @keyframes float{
-0%{
-    transform: translateY(100vh) scale(0);
-    opacity:0;
-}
-
-20%{
-    opacity:1;
-}
-
-80%{
-    transform: translateY(10vh) scale(1.2);
-    opacity:1;
-}
-
-95%{
-    transform: translateY(-5vh) scale(1.5);
-    opacity:1;
-}
-
-100%{
-    transform: translateY(-10vh) scale(2);
-    opacity:0;
-}
+0%{ transform: translateY(100vh) scale(0); opacity:0; }
+20%{ opacity:1; }
+80%{ transform: translateY(10vh) scale(1.2); opacity:1; }
+95%{ transform: translateY(-5vh) scale(1.5); opacity:1; }
+100%{ transform: translateY(-10vh) scale(2); opacity:0; }
 }
 
 /* Login container */
-
 .login-container{
     position: relative;
     width: 350px;
     padding: 40px;
-    background: rgba(255,255,255,0.1);
-    backdrop-filter: blur(15px);
+    background: rgba(36, 46, 73, 0.55);
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
     border-radius: 20px;
-    box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+    box-shadow: 0 20px 50px rgba(0,0,0,0.5), 0 0 0 1px rgba(253,164,129,0.18);
     text-align: center;
     color: white;
+    border: 1px solid rgba(253,164,129,0.2);
 }
 
 .login-container h2{
     margin-bottom: 30px;
     font-weight: bold;
+    color: #FDA481;
+    letter-spacing: 0.4px;
 }
 
 .login-container input{
@@ -139,8 +84,14 @@ animation-duration:19s;
     padding: 12px;
     margin-bottom: 20px;
     border-radius: 25px;
-    border: none;
+    border: 1px solid rgba(253,164,129,0.3);
     outline: none;
+    background: rgba(24, 26, 47, 0.65);
+    color: white;
+}
+
+.login-container input::placeholder {
+    color: rgba(253, 164, 129, 0.45);
 }
 
 .login-container button{
@@ -148,199 +99,194 @@ animation-duration:19s;
     padding: 12px;
     border: none;
     border-radius: 25px;
-    background: #6a11cb;
+    background: linear-gradient(135deg, #B4182D, #54162B);
     color: white;
     font-weight: bold;
     cursor: pointer;
     transition: 0.3s;
+    box-shadow: 0 4px 16px rgba(180, 24, 45, 0.4);
 }
 
 .login-container button:hover{
-    background: #2575fc;
+    background: linear-gradient(135deg, #FDA481, #B4182D);
+    color: #181A2F;
+    box-shadow: 0 6px 20px rgba(253,164,129,0.35);
 }
 
-
-
 /* Chat container */
-
 .chat-container{
-width:900px;
-height:550px;
-display:flex;
-background: rgba(255, 255, 255, 0.15);
-backdrop-filter: blur(10px);
-border-radius:20px;
-box-shadow:0 20px 40px rgba(0,0,0,0.3);
-overflow:hidden;
+    width:900px;
+    height:550px;
+    display:flex;
+    background: rgba(24, 26, 47, 0.6);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    border-radius:20px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.5), 0 0 0 1px rgba(253,164,129,0.1);
+    overflow:hidden;
+    border: 1px solid rgba(253,164,129,0.12);
 }
 
 /* Sidebar */
-
 .sidebar{
-width:250px;
-background:rgba(0,0,0,0.2);
-color:white;
-padding:20px;
-overflow:auto;
-flex-shrink: 0; /* ✅ prevent sidebar from shrinking */
+    width:250px;
+    background: rgba(36, 46, 73, 0.85);
+    color:white;
+    padding:20px;
+    overflow:auto;
+    flex-shrink: 0;
+    border-right: 1px solid rgba(253,164,129,0.1);
 }
 
 .sidebar h3{
-margin-bottom:15px;
+    margin-bottom:15px;
+    color: #FDA481;
+    font-size: 14px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
 }
 
 .sidebar div{
-padding:8px;
-border-bottom:1px solid rgba(255,255,255,0.2);
+    padding:8px;
+    border-bottom:1px solid rgba(253,164,129,0.1);
 }
 
 /* Chat Area */
-
 .chat-area{
-flex:1;
-display:flex;
-flex-direction:column;
-border-radius:20px;
-min-width: 0; /* ✅ allow flex child to shrink properly */
+    flex:1;
+    display:flex;
+    flex-direction:column;
+    border-radius:20px;
+    min-width: 0;
 }
 
 /* Header */
-
 .chat-header{
-padding:15px;
-background:rgba(0,0,0,0.2);
-color:white;
-font-weight:bold;
-flex-shrink: 0;
+    padding:15px;
+    background: rgba(36, 46, 73, 0.92);
+    color: #FDA481;
+    font-weight:bold;
+    flex-shrink: 0;
+    border-bottom: 1px solid rgba(253,164,129,0.12);
 }
-
 
 @keyframes fadeIn{
-from{
-opacity:0;
-transform:translateY(10px);
-}
-to{
-opacity:1;
-transform:translateY(0);
-}
+from{ opacity:0; transform:translateY(10px); }
+to{ opacity:1; transform:translateY(0); }
 }
 
 /* Input area */
-
 .chat-input{
-display:flex;
-flex-direction: column; /* always column so preview sits above input row */
-padding:15px;
-background:rgba(0,0,0,0.2);
-flex-shrink: 0;
+    display:flex;
+    flex-direction: column;
+    padding:15px;
+    background: rgba(36, 46, 73, 0.88);
+    flex-shrink: 0;
+    border-top: 1px solid rgba(253,164,129,0.1);
 }
 
 .chat-input input{
-flex:1;
-padding:10px;
-border:none;
-border-radius:20px;
-outline:none;
+    flex:1;
+    padding:10px;
+    border: 1px solid rgba(253,164,129,0.25);
+    border-radius:20px;
+    outline:none;
+    background: rgba(24, 26, 47, 0.75);
+    color: white;
+}
+
+.chat-input input::placeholder {
+    color: rgba(253, 164, 129, 0.4);
 }
 
 .chat-input button{
-margin-left:10px;
-padding:10px 20px;
-border:none;
-border-radius:20px;
-background:#6a11cb;
-color:white;
-cursor:pointer;
-transition:0.3s;
+    margin-left:10px;
+    padding:10px 20px;
+    border:none;
+    border-radius:20px;
+    background: linear-gradient(135deg, #B4182D, #54162B);
+    color:white;
+    cursor:pointer;
+    transition:0.3s;
+    box-shadow: 0 3px 12px rgba(180,24,45,0.35);
 }
 
 .chat-input button:hover{
-background:#2575fc;
+    background: linear-gradient(135deg, #FDA481, #B4182D);
+    color: #181A2F;
+    box-shadow: 0 4px 16px rgba(253,164,129,0.3);
 }
 
-
-/* Transparent messages container */
+/* Messages container */
 #messages {
     flex: 1;
     padding: 15px;
     display: flex;
     flex-direction: column;
     gap: 10px;
-    background: rgba(255, 255, 255, 0.1); 
-    backdrop-filter: blur(15px);
+    background: rgba(24, 26, 47, 0.45);
+    backdrop-filter: blur(10px);
     border-radius: 10px;
     overflow-y: auto;
-    overflow-x: hidden; /* ✅ prevent horizontal scroll */
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
-    min-width: 0; /* ✅ allow proper shrinking */
+    overflow-x: hidden;
+    border: 1px solid rgba(253,164,129,0.08);
+    box-shadow: inset 0 2px 12px rgba(0,0,0,0.2);
+    min-width: 0;
 }
 
 #messages div {
-    color: #000000;
+    color: #ffffff;
     padding: 5px 15px;
     border-radius: 20px;
     max-width: 100%;
     animation: fadeIn 0.3s ease;
 }
 
+/* Custom scrollbar */
+#messages::-webkit-scrollbar { width: 6px; }
+#messages::-webkit-scrollbar-thumb { background: rgba(253,164,129,0.3); border-radius: 3px; }
+#messages::-webkit-scrollbar-track { background: transparent; }
 
-/* Custom scrollbar for modern look */
-#messages::-webkit-scrollbar {
-    width: 6px;
-}
-#messages::-webkit-scrollbar-thumb {
-    background: rgba(255,255,255,0.3);
-    border-radius: 3px;
-}
-#messages::-webkit-scrollbar-track {
-    background: transparent;
-}
-
-/* ✅ Message wrapper — controls alignment left/right */
+/* Message wrapper */
 .message-wrapper {
     position: relative;
     display: flex;
     align-items: flex-end;
     gap: 8px;
     max-width: 100%;
-    /* Received: align left */
     align-self: flex-start;
 }
 
 .message-wrapper.sent-wrapper {
     flex-direction: row-reverse;
-    /* Sent: align right */
     align-self: flex-end;
 }
 
-/* ✅ Received message bubble — left side */
+/* Received bubble */
 #messages .message {
-    background: rgba(255, 255, 255, 0.75);
-    color: #1a1a2e;
+    background: rgba(55, 65, 92, 0.88);
+    color: #f0e8e0;
     padding: 10px 15px;
-    border-radius: 18px 18px 18px 4px; /* pointed bottom-left */
+    border-radius: 18px 18px 18px 4px;
     max-width:fit-content;
     min-width: 60px;
-    box-shadow: 0 3px 10px rgba(0,0,0,0.12);
-    /* ✅ Word wrap fixes */
+    box-shadow: 0 3px 10px rgba(0,0,0,0.25);
+    border: 1px solid rgba(253,164,129,0.15);
     word-break: break-word;
     overflow-wrap: break-word;
     white-space: pre-wrap;
     box-sizing: border-box;
 }
 
-/* ✅ Sent message bubble — right side */
+/* Sent bubble */
 #messages .sent {
-    background: #6a11cb;
+    background: linear-gradient(135deg, #B4182D, #54162B);
     color: #fff;
     padding: 10px 15px;
-    border-radius: 18px 18px 4px 18px; /* pointed bottom-right */
+    border-radius: 18px 18px 4px 18px;
     max-width: fit-content;
     min-width: 60px;
-    box-shadow: 0 3px 12px rgba(106, 17, 203, 0.4);
-    /* ✅ Word wrap fixes */
+    box-shadow: 0 3px 14px rgba(180,24,45,0.45);
     word-break: break-word;
     overflow-wrap: break-word;
     white-space: pre-wrap;
@@ -360,7 +306,7 @@ background:#2575fc;
     font-size: 14px;
 }
 
-/* ✅ Time styling */
+/* Time */
 .msg-time {
     font-size: 11px;
     opacity: 0.55;
@@ -368,20 +314,18 @@ background:#2575fc;
     margin-top: 2px;
 }
 
-.message .msg-time {
-    align-self: flex-start;
-}
+.message .msg-time { align-self: flex-start; }
 
 /* Sidebar user items */
 .sidebar div{
     padding:8px;
-    border-bottom:1px solid rgba(255,255,255,0.2);
+    border-bottom:1px solid rgba(253,164,129,0.1);
     color:white;
 }
 
 .sidebar .current-user {
     font-weight: bold;
-    color: #6a11cb;
+    color: #FDA481;
 }
 
 .user-item {
@@ -389,10 +333,14 @@ background:#2575fc;
     align-items: center;
     gap: 8px;
     padding: 8px;
-    border-bottom: 1px solid rgba(255,255,255,0.2);
+    border-bottom: 1px solid rgba(253,164,129,0.1);
     color: white;
     position: relative;
+    border-radius: 8px;
+    transition: background 0.2s;
 }
+
+.user-item:hover { background: rgba(253,164,129,0.08); }
 
 .dot {
     width: 10px;
@@ -402,23 +350,17 @@ background:#2575fc;
     flex-shrink: 0;
 }
 
-.dot.online {
-    background: #22c55e;
-    box-shadow: 0 0 6px #22c55e;
-}
-
-.dot.offline {
-    background: #6b7280;
-}
+.dot.online { background: #22c55e; box-shadow: 0 0 6px #22c55e; }
+.dot.offline { background: #6b7280; }
 
 .current-user span:last-child {
     font-weight: bold;
-    color: #a78bfa;
+    color: #FDA481;
 }
 
 .typing-indicator {
     padding: 5px 20px;
-    color: rgba(255, 255, 255, 0.7);
+    color: rgba(253, 164, 129, 0.7);
     font-style: italic;
     font-size: 13px;
     min-height: 24px;
@@ -436,9 +378,9 @@ background:#2575fc;
 
 .mode-btn {
     padding: 8px 12px;
-    border: none;
+    border: 1px solid rgba(253,164,129,0.12);
     border-radius: 20px;
-    background: rgba(255,255,255,0.1);
+    background: rgba(55, 65, 92, 0.5);
     color: white;
     cursor: pointer;
     transition: 0.3s;
@@ -446,36 +388,35 @@ background:#2575fc;
     font-size: 14px;
 }
 
-.mode-btn:hover {
-    background: rgba(255,255,255,0.2);
-}
+.mode-btn:hover { background: rgba(253,164,129,0.15); }
 
 .mode-btn.active {
-    background: #6a11cb;
+    background: linear-gradient(135deg, #B4182D, #54162B);
     font-weight: bold;
+    border-color: transparent;
+    box-shadow: 0 3px 10px rgba(180,24,45,0.35);
 }
 
 /* Info message */
 .info-msg {
-    color: rgba(255,255,255,0.5);
+    color: rgba(253,164,129,0.5);
     text-align: center;
     margin-top: 50px;
     font-style: italic;
 }
 
-/* Highlight selected user in private chat */
+/* Selected user */
 .user-item.selected {
-    background: rgba(106, 17, 203, 0.3);
+    background: rgba(180, 24, 45, 0.25);
     border-radius: 10px;
+    border: 1px solid rgba(253,164,129,0.2);
 }
 
-.username-text {
-    flex: 1;
-}
+.username-text { flex: 1; }
 
-/* ✅ Unread message badge */
+/* Badge */
 .badge {
-    background: rgba(255, 255, 255, 0.25);
+    background: #B4182D;
     color: white;
     border-radius: 50%;
     min-width: 22px;
@@ -485,8 +426,7 @@ background:#2575fc;
     justify-content: center;
     font-size: 12px;
     font-weight: bold;
-    backdrop-filter: blur(5px);
-    border: 1px solid rgba(255,255,255,0.3);
+    box-shadow: 0 2px 8px rgba(180,24,45,0.4);
     margin-left: auto;
 }
 
@@ -497,7 +437,7 @@ background:#2575fc;
     justify-content: center;
     margin: 15px 0;
     position: relative;
-    align-self: stretch; /* ✅ span full width */
+    align-self: stretch;
 }
 
 .date-separator::before,
@@ -505,29 +445,25 @@ background:#2575fc;
     content: '';
     flex: 1;
     height: 1px;
-    background: rgba(255, 255, 255, 0.2);
+    background: rgba(253,164,129,0.15);
 }
 
 .date-separator span {
-    background: rgba(255, 255, 255, 0.15);
+    background: rgba(55, 65, 92, 0.65);
     backdrop-filter: blur(5px);
-    color: rgba(255, 255, 255, 0.8);
+    color: rgba(253, 164, 129, 0.85);
     font-size: 12px;
     padding: 4px 12px;
     border-radius: 20px;
     margin: 0 10px;
-    border: 1px solid rgba(255, 255, 255, 0.2);
+    border: 1px solid rgba(253,164,129,0.2);
 }
 
-/* Reply button on hover */
-/* CHANGED: old floating reply/save/del buttons removed — replaced by ⋮ in-bubble menu */
-/* .reply-btn styles intentionally removed */
-
-/* Reply preview box above input */
+/* Reply box */
 #reply-box {
     display: none;
-    background: rgba(106, 17, 203, 0.2);
-    border-left: 3px solid #6a11cb;
+    background: rgba(180, 24, 45, 0.2);
+    border-left: 3px solid #FDA481;
     padding: 8px 12px;
     margin: 0 15px 5px;
     border-radius: 8px;
@@ -538,9 +474,7 @@ background:#2575fc;
     flex-shrink: 0;
 }
 
-#reply-box.active {
-    display: flex;
-}
+#reply-box.active { display: flex; }
 
 #reply-box-text {
     flex: 1;
@@ -553,33 +487,17 @@ background:#2575fc;
 #reply-box button {
     background: none;
     border: none;
-    color: white;
+    color: #FDA481;
     font-size: 16px;
     cursor: pointer;
     margin-left: 10px;
     opacity: 0.7;
 }
 
-/* Quoted reply inside message bubble */
-/* .reply-quote {
-    background: rgba(255, 255, 255, 0.863);
-    border-left: 3px solid rgba(106, 17, 203, 0.5);
-    padding: 5px 10px;
-    border-radius: 6px;
-    font-size: 12px;
-    margin-bottom: 5px;
-    opacity: 0.85;
-    /* ✅ word wrap for quoted text too */
-    /* word-break: break-word;
-    overflow-wrap: break-word;
-    white-space: pre-wrap;
-    max-width: 100%;
-    color: #ffffff;
-} */ 
-
+/* Reply quote */
 .reply-quote {
-    background: rgba(0,0,0,0.15);
-    border-left: 3px solid rgba(255,255,255,0.5);
+    background: rgba(0,0,0,0.2);
+    border-left: 3px solid #FDA481;
     padding: 5px 10px;
     border-radius: 6px;
     font-size: 12px;
@@ -588,18 +506,16 @@ background:#2575fc;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    color: rgba(255, 255, 255, 0.9); /* ✅ ADD THIS LINE */
+    color: rgba(255, 255, 255, 0.9);
 }
-
-
-
 
 .sent .reply-quote {
-    border-left-color: rgba(255,255,255,0.6);
-    background: rgba(0,0,0,0.2);
+    border-left-color: rgba(253,164,129,0.7);
+    background: rgba(0,0,0,0.25);
     color: #ffffff;
 }
-/* ---- Image feature styles ---- */
+
+/* Image feature */
 .img-btn {
     background: none;
     border: none;
@@ -613,17 +529,17 @@ background:#2575fc;
 }
 .img-btn:hover { opacity: 1; }
 
-.msg-image-wrap {
-    margin-top: 6px;
-}
+.msg-image-wrap { margin-top: 6px; }
+
 .msg-image {
     max-width: 220px;
     max-height: 220px;
     border-radius: 10px;
     display: block;
     cursor: pointer;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    box-shadow: 0 2px 10px rgba(0,0,0,0.35);
     transition: transform 0.15s;
+    border: 1px solid rgba(253,164,129,0.2);
 }
 .msg-image:hover { transform: scale(1.03); }
 
@@ -633,22 +549,23 @@ background:#2575fc;
     opacity: 0.8;
     display: block;
     margin-bottom: 2px;
+    color: #FDA481;
 }
 
 #image-preview-area {
-    display: none;          /* shown via JS */
+    display: none;
     align-items: center;
     gap: 8px;
     padding: 4px 8px;
-    background: rgba(255,255,255,0.08);
+    background: rgba(55,65,92,0.4);
     border-radius: 8px;
     margin-bottom: 4px;
     max-width: 100%;
     flex-shrink: 0;
     overflow: hidden;
+    border: 1px solid rgba(253,164,129,0.15);
 }
 
-/* Preview thumbnail — fixed small size so it never crowds the input row */
 .preview-thumb {
     height: 56px;
     width: 56px;
@@ -657,9 +574,8 @@ background:#2575fc;
     flex-shrink: 0;
 }
 
-/* Cancel button next to the preview thumbnail */
 .preview-cancel-btn {
-    background: rgba(255,255,255,0.15);
+    background: rgba(180,24,45,0.35);
     border: none;
     color: white;
     font-size: 14px;
@@ -674,19 +590,12 @@ background:#2575fc;
     margin-left: 0;
     padding: 0;
 }
-.preview-cancel-btn:hover {
-    background: rgba(255,255,255,0.3);
-}
+.preview-cancel-btn:hover { background: rgba(180,24,45,0.65); }
 
-
-/* ═══════════════════════════════════════════════════
-   NEW: Saved Messages feature styles
-   ═══════════════════════════════════════════════════ */
-
-/* Card container for each saved message */
+/* Saved messages */
 .saved-card {
-    background: rgba(255, 255, 255, 0.12);
-    border: 1px solid rgba(255, 255, 255, 0.2);
+    background: rgba(55, 65, 92, 0.45);
+    border: 1px solid rgba(253,164,129,0.2);
     border-radius: 14px;
     padding: 12px 14px;
     display: flex;
@@ -698,7 +607,6 @@ background:#2575fc;
     backdrop-filter: blur(8px);
 }
 
-/* Top row: sender name, source chat label, delete button */
 .saved-card-meta {
     display: flex;
     align-items: center;
@@ -708,12 +616,12 @@ background:#2575fc;
 
 .saved-from {
     font-weight: 700;
-    color: #a78bfa;
+    color: #FDA481;
     flex-shrink: 0;
 }
 
 .saved-source {
-    color: rgba(255,255,255,0.45);
+    color: rgba(253,164,129,0.45);
     font-style: italic;
     flex: 1;
     white-space: nowrap;
@@ -733,37 +641,33 @@ background:#2575fc;
 }
 .saved-delete-btn:hover { opacity: 1; }
 
-/* Message text inside the saved card */
 .saved-card-text {
-    color: rgba(255,255,255,0.9);
+    color: rgba(240,232,224,0.9);
     font-size: 14px;
     line-height: 1.45;
     word-break: break-word;
     overflow-wrap: break-word;
 }
 
-/* Timestamp at the bottom of the saved card */
 .saved-card-time {
     font-size: 11px;
-    color: rgba(255,255,255,0.35);
+    color: rgba(253,164,129,0.35);
     align-self: flex-end;
 }
 
-/* CHANGED: .save-btn removed — now inside ⋮ dropdown */
-
-/* Toast notification (brief "Message saved!" popup) */
+/* Toast */
 #toast-msg {
     position: fixed;
     bottom: 30px;
     left: 50%;
     transform: translateX(-50%) translateY(20px);
-    background: rgba(106, 17, 203, 0.9);
+    background: linear-gradient(135deg, #B4182D, #54162B);
     color: white;
     padding: 10px 22px;
     border-radius: 30px;
     font-size: 14px;
     font-weight: 500;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+    box-shadow: 0 4px 20px rgba(180,24,45,0.45);
     opacity: 0;
     pointer-events: none;
     transition: opacity 0.3s, transform 0.3s;
@@ -776,21 +680,14 @@ background:#2575fc;
     transform: translateX(-50%) translateY(0);
 }
 
-
-/* ═══════════════════════════════════════════════════
-   NEW: Delete message feature styles
-   ═══════════════════════════════════════════════════ */
-
-/* CHANGED: .del-btn removed — now inside ⋮ dropdown */
-
-/* Dropdown menu that appears when 🗑️ is clicked */
+/* Delete menu */
 .delete-menu {
     position: fixed;
     z-index: 99999;
-    background: rgba(30, 20, 50, 0.97);
-    border: 1px solid rgba(255,255,255,0.15);
+    background: rgba(24, 26, 47, 0.97);
+    border: 1px solid rgba(253,164,129,0.2);
     border-radius: 12px;
-    box-shadow: 0 8px 30px rgba(0,0,0,0.4);
+    box-shadow: 0 8px 30px rgba(0,0,0,0.5);
     overflow: hidden;
     min-width: 190px;
     animation: fadeIn 0.15s ease;
@@ -802,7 +699,7 @@ background:#2575fc;
     padding: 11px 16px;
     background: none;
     border: none;
-    color: rgba(255,255,255,0.88);
+    color: rgba(240,232,224,0.88);
     font-size: 13px;
     text-align: left;
     cursor: pointer;
@@ -811,33 +708,23 @@ background:#2575fc;
     border-radius: 0;
 }
 
-.delete-menu button:hover {
-    background: rgba(255,255,255,0.1);
-}
+.delete-menu button:hover { background: rgba(253,164,129,0.1); }
 
-/* "Delete for everyone" is red — uses explicit class so position doesn't matter */
 .delete-menu button.delete-for-all {
     color: #f87171;
-    border-top: 1px solid rgba(255,255,255,0.08);
+    border-top: 1px solid rgba(253,164,129,0.08);
 }
 
-.delete-menu button.delete-for-all:hover {
-    background: rgba(248, 113, 113, 0.12);
-}
+.delete-menu button.delete-for-all:hover { background: rgba(248, 113, 113, 0.12); }
 
-
-/* ═══════════════════════════════════════════════════
-   NEW: ⋮ in-bubble menu button styles
-   ═══════════════════════════════════════════════════ */
-
-/* ⋮ button sits in the top-right corner of every message bubble */
+/* ⋮ menu button */
 .msg-menu-btn {
     position: absolute;
     top: 4px;
     right: 4px;
     background: none;
     border: none;
-    color: rgba(255,255,255,0.6);
+    color: rgba(253,164,129,0.7);
     font-size: 16px;
     font-weight: bold;
     line-height: 1;
@@ -849,41 +736,25 @@ background:#2575fc;
     z-index: 2;
 }
 
-/* On received bubbles use a darker tint so it shows on light background */
-#messages .message .msg-menu-btn {
-    color: rgba(30, 20, 50, 0.5);
-}
+#messages .message .msg-menu-btn { color: rgba(253,164,129,0.6); }
 
-/* Show the button when hovering the bubble */
 #messages .sent:hover .msg-menu-btn,
-#messages .message:hover .msg-menu-btn {
-    opacity: 1;
-}
+#messages .message:hover .msg-menu-btn { opacity: 1; }
 
-.msg-menu-btn:hover {
-    background: rgba(255,255,255,0.15);
-    opacity: 1;
-}
+.msg-menu-btn:hover { background: rgba(253,164,129,0.15); opacity: 1; }
 
-/* Bubbles need position:relative so the absolute ⋮ button sits inside them */
 #messages .sent,
 #messages .message {
     position: relative;
-    /* Add a little right padding so text doesn't flow under the ⋮ button */
     padding-right: 22px;
 }
 
-
-/* ═══════════════════════════════════════════════════════════════
-   NEW: Responsive design — laptop, tablet, and mobile
-   ═══════════════════════════════════════════════════════════════ */
-
-/* ── Hamburger button (hidden on desktop) ── */
+/* Hamburger */
 .hamburger-btn {
     display: none;
     background: none;
     border: none;
-    color: white;
+    color: #FDA481;
     font-size: 22px;
     cursor: pointer;
     padding: 0 10px 0 0;
@@ -891,23 +762,16 @@ background:#2575fc;
     flex-shrink: 0;
 }
 
-/* Make chat-header a flex row so hamburger + title sit side-by-side */
-.chat-header {
-    display: flex;
-    align-items: center;
-}
+.chat-header { display: flex; align-items: center; }
 
-#chat-header-text {
-    flex: 1;
-}
+#chat-header-text { flex: 1; }
 
-/* ── Sidebar close button (hidden on desktop) ── */
 .sidebar-close-btn {
     display: none;
     position: absolute;
     top: 12px;
     right: 12px;
-    background: rgba(255,255,255,0.15);
+    background: rgba(253,164,129,0.15);
     border: none;
     color: white;
     font-size: 16px;
@@ -918,236 +782,58 @@ background:#2575fc;
     z-index: 1;
 }
 
-/* ── Dark overlay behind open sidebar on mobile ── */
 .sidebar-overlay {
-    display: none;          /* hidden everywhere by default */
+    display: none;
     position: fixed;
     inset: 0;
     background: rgba(0,0,0,0.5);
     z-index: 998;
-    /* FIXED: only allowed to show inside the ≤700px media query */
 }
 
-/* .sidebar-overlay.active only takes effect inside the mobile breakpoint below */
-
-/* ══════════════════════════════════════
-   BREAKPOINT 1: Large laptop (≤ 1100px)
-   — shrink the container a little
-   ══════════════════════════════════════ */
+/* ── Responsive ───────────────────────────────────────────── */
 @media (max-width: 1100px) {
-    .chat-container {
-        width: 98vw;
-        height: 92vh;
-        border-radius: 14px;
-    }
+    .chat-container { width: 98vw; height: 92vh; border-radius: 14px; }
 }
 
-/* ══════════════════════════════════════
-   BREAKPOINT 2: Small laptop / tablet (≤ 850px)
-   — narrower sidebar
-   ══════════════════════════════════════ */
 @media (max-width: 850px) {
-    body {
-        background: linear-gradient(135deg,#1d2b64,#f8cdda);
-        background-attachment: fixed;
-    }
-
-    .chat-container {
-        width: 100vw;
-        height: 100dvh;
-        border-radius: 0;
-        /* FIXED: keep glass effect on tablet */
-        background: rgba(255, 255, 255, 0.12);
-        backdrop-filter: blur(10px);
-        -webkit-backdrop-filter: blur(10px);
-    }
-
-    .sidebar {
-        width: 200px;
-    }
+    body { background: linear-gradient(135deg, #181A2F 0%, #54162B 60%, #FDA481 100%); background-attachment: fixed; }
+    .chat-container { width: 100vw; height: 100dvh; border-radius: 0; background: rgba(24,26,47,0.55); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); }
+    .sidebar { width: 200px; }
 }
 
-/* ══════════════════════════════════════
-   BREAKPOINT 3: Mobile (≤ 700px)
-   — sidebar slides in as drawer
-   ══════════════════════════════════════ */
 @media (max-width: 700px) {
-
-    body {
-        /* FIXED: keep center alignment — login/register boxes stay centered */
-        /* align-items stays as center (default) for login/register pages */
-        overflow: hidden;
-        background: linear-gradient(135deg,#1d2b64,#f8cdda);
-        background-attachment: fixed;
-    }
-
-    /* Only push to top on chat page (where .chat-container exists) */
-    body:has(.chat-container) {
-        align-items: flex-start;
-    }
-
-    .chat-container {
-        width: 100vw;
-        height: 100dvh;
-        border-radius: 0;
-        position: relative;
-        /* FIXED: keep glass effect — semi-transparent so gradient shows through */
-        background: rgba(255, 255, 255, 0.08);
-        backdrop-filter: blur(10px);
-        -webkit-backdrop-filter: blur(10px); /* Safari support */
-        box-shadow: none;
-    }
-
-    /* Sidebar becomes a fixed slide-in drawer */
-    .sidebar {
-        position: fixed;
-        top: 0;
-        left: 0;
-        height: 100dvh;
-        width: 80vw;
-        max-width: 300px;
-        z-index: 999;
-        transform: translateX(-100%);
-        transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1);
-        border-radius: 0 16px 16px 0;
-        padding-top: 50px; /* room for close button */
-    }
-
-    .sidebar.open {
-        transform: translateX(0);
-    }
-
-    /* FIXED: overlay only activates on mobile */
-    .sidebar-overlay.active {
-        display: block;
-        background: rgba(0,0,0,0.6);
-    }
-
-    /* Show hamburger and close buttons on mobile */
-    .hamburger-btn {
-        display: block;
-    }
-
-    .sidebar-close-btn {
-        display: block;
-    }
-
-    /* Chat area fills full width on mobile */
-    .chat-area {
-        width: 100%;
-    }
-
-    /* Slightly smaller text input on mobile */
-    .chat-input {
-        padding: 10px;
-    }
-
-    .chat-input button {
-        padding: 10px 14px;
-        font-size: 13px;
-    }
-
-    /* Message bubbles don't go full width */
-    #messages .message,
-    #messages .sent {
-        max-width: 82vw;
-    }
-
-    /* Larger tap targets for the ⋮ menu button */
-    .msg-menu-btn {
-        font-size: 18px;
-        padding: 4px 7px;
-        opacity: 0.7; /* always slightly visible on mobile — no hover */
-    }
-
-    /* Always show ⋮ on mobile (no hover state on touchscreens) */
-    #messages .sent .msg-menu-btn,
-    #messages .message .msg-menu-btn {
-        opacity: 0.6;
-    }
-
-    /* Slightly smaller font in header */
-    .chat-header {
-        font-size: 14px;
-        padding: 12px;
-    }
-
-    /* Saved cards full width on mobile */
-    .saved-card {
-        max-width: 100%;
-    }
+    body { overflow: hidden; background: linear-gradient(135deg, #181A2F 0%, #54162B 60%, #FDA481 100%); background-attachment: fixed; }
+    body:has(.chat-container) { align-items: flex-start; }
+    .chat-container { width: 100vw; height: 100dvh; border-radius: 0; position: relative; background: rgba(24,26,47,0.5); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); box-shadow: none; }
+    .sidebar { position: fixed; top: 0; left: 0; height: 100dvh; width: 80vw; max-width: 300px; z-index: 999; transform: translateX(-100%); transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1); border-radius: 0 16px 16px 0; padding-top: 50px; background: rgba(36,46,73,0.97); }
+    .sidebar.open { transform: translateX(0); }
+    .sidebar-overlay.active { display: block; background: rgba(0,0,0,0.6); }
+    .hamburger-btn { display: block; }
+    .sidebar-close-btn { display: block; }
+    .chat-area { width: 100%; }
+    .chat-input { padding: 10px; }
+    .chat-input button { padding: 10px 14px; font-size: 13px; }
+    #messages .message, #messages .sent { max-width: 82vw; }
+    .msg-menu-btn { font-size: 18px; padding: 4px 7px; opacity: 0.7; }
+    #messages .sent .msg-menu-btn, #messages .message .msg-menu-btn { opacity: 0.6; }
+    .chat-header { font-size: 14px; padding: 12px; }
+    .saved-card { max-width: 100%; }
+    .background span { display: none; }
+    .login-container { position: relative; margin: auto; width: 88vw; max-width: 380px; }
 }
 
-/* ══════════════════════════════════════
-   BREAKPOINT 4: Very small phones (≤ 400px)
-   ══════════════════════════════════════ */
 @media (max-width: 400px) {
-    .sidebar {
-        width: 88vw;
-    }
-
-    .chat-input button {
-        padding: 9px 10px;
-        font-size: 12px;
-    }
-
-    #messages .message,
-    #messages .sent {
-        max-width: 90vw;
-        font-size: 13px;
-    }
-
-    .msg-image {
-        max-width: 160px;
-        max-height: 160px;
-    }
-}
-
-/* ══════════════════════════════════════════════════
-   Prevent floating background bubbles from causing
-   overflow scroll on mobile
-   ══════════════════════════════════════════════════ */
-@media (max-width: 700px) {
-    .background span {
-        display: none;
-    }
-}
-
-/* ── Login / Register form responsive ── */
-@media (max-width: 700px) {
-    /* FIXED: force login/register box to stay centered on all mobile screens */
-    .login-container {
-        position: relative;
-        margin: auto;
-        width: 88vw;
-        max-width: 380px;
-    }
+    .sidebar { width: 88vw; }
+    .chat-input button { padding: 9px 10px; font-size: 12px; }
+    #messages .message, #messages .sent { max-width: 90vw; font-size: 13px; }
+    .msg-image { max-width: 160px; max-height: 160px; }
 }
 
 @media (max-width: 480px) {
-    .login-container {
-        width: 92vw;
-        padding: 28px 20px;
-        border-radius: 16px;
-    }
+    .login-container { width: 92vw; padding: 28px 20px; border-radius: 16px; }
 }
 
-/* ── Input row (image btn + text input + send btn) ── */
-.input-row {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    width: 100%;
-    min-width: 0;
-}
-
-/* Text input takes all remaining space but never pushes Send off */
-.input-row input {
-    flex: 1;
-    min-width: 0;      /* critical — allows flex child to shrink below content size */
-}
-
-/* Send button and image button must NEVER shrink */
-.input-row button {
-    flex-shrink: 0;
-}
+/* Input row */
+.input-row { display: flex; align-items: center; gap: 6px; width: 100%; min-width: 0; }
+.input-row input { flex: 1; min-width: 0; }
+.input-row button { flex-shrink: 0; }
