@@ -99,14 +99,7 @@ function startPrivateChat(targetUser) {
     .then(res => res.json())
     .then(messages => {
         messages.forEach(m => {
-            const status = m.sender === username ? (m.read_status || "sent") : null;
-            addMessage(m.sender, m.message, m.sender === username, m.timestamp, m.reply_to, m.image_data, m.image_type, m.id, "private", targetUser, status);
-        });
-        // Mark all unread messages from targetUser as read
-        socket.emit("markAllRead", { from: targetUser });
-        // Update all their message ticks in our UI
-        messages.forEach(m => {
-            if (m.sender === targetUser) updateReceiptStatus(m.id, "read");
+            addMessage(m.sender, m.message, m.sender === username, m.timestamp, m.reply_to, m.image_data, m.image_type, m.id, "private", targetUser);
         });
     });
 }
@@ -167,22 +160,14 @@ socket.on("message", (data) => {
     }
 });
 
-socket.on("privateMessage", ({ id, from, message, replyTo, imageData, imageType, status }) => {
+socket.on("privateMessage", ({ id, from, message, replyTo, imageData, imageType }) => {
     if (from === username) {
-        // Server echo to sender — assign real id and update to delivered ✓✓
-        updateLastOptimisticMessage(id, status || "delivered");
+        // Server echo to sender — assign real id
+        updateLastOptimisticMessage(id);
         return;
     }
     if (chatMode === "private" && from === privateChatWith) {
-        // Mark as delivered immediately since receiver is viewing chat
-        addMessage(from, message, false, null, replyTo, imageData, imageType, id, "private", from, "delivered");
-        // Tell sender we received it
-        socket.emit("markDelivered", { id, to: from });
-        // If window is focused, mark as read right away
-        if (document.hasFocus()) {
-            socket.emit("markRead", { id, to: from });
-            updateReceiptStatus(id, "read");
-        }
+        addMessage(from, message, false, null, replyTo, imageData, imageType, id, "private", from);
     } else {
         unreadCounts[from] = (unreadCounts[from] || 0) + 1;
         loadAllUsers();
@@ -239,7 +224,7 @@ function sendMsg(){
             imageType: pendingImage ? pendingImage.type : null
         });
         // CHANGED: id is null until server echoes back; delete-for-me still works locally via wrapper removal
-        addMessage(username, msg, true, null, replyingTo, pendingImage ? pendingImage.data : null, pendingImage ? pendingImage.type : null, null, "private", privateChatWith, "sent");
+        addMessage(username, msg, true, null, replyingTo, pendingImage ? pendingImage.data : null, pendingImage ? pendingImage.type : null, null, "private", privateChatWith);
         // Track this optimistic wrapper so we can patch it with real id later
         const _msgs = document.getElementById("messages");
         _lastOptimisticWrapper = _msgs ? _msgs.querySelector(".message-wrapper:last-child") : null;
@@ -267,7 +252,7 @@ document.getElementById("msg").addEventListener("input", () => {
 });
 
 // CHANGED: added msgId, chatType, chatPeer params for delete functionality
-function addMessage(user, message, isCurrentUser, timestamp = null, replyTo = null, imageData = null, imageType = null, msgId = null, chatType = "group", chatPeer = null, status = null) {
+function addMessage(user, message, isCurrentUser, timestamp = null, replyTo = null, imageData = null, imageType = null, msgId = null, chatType = "group", chatPeer = null) {
     showDateSeparatorIfNeeded(timestamp);
 
     const messagesDiv = document.getElementById("messages");
@@ -286,8 +271,7 @@ function addMessage(user, message, isCurrentUser, timestamp = null, replyTo = nu
     if (chatPeer) wrapper.dataset.chatPeer = chatPeer;
     // Store timestamp for 30-min edit window
     wrapper.dataset.timestamp = timestamp ? new Date(timestamp).getTime() : Date.now();
-    // Store receipt status
-    if (status) wrapper.dataset.status = status;
+
 
     // CHANGED: replaced 3 separate floating buttons with a single ⋮ menu button
     // inside the bubble's top-right corner (WhatsApp/Telegram style)
@@ -315,10 +299,7 @@ function addMessage(user, message, isCurrentUser, timestamp = null, replyTo = nu
         ${replyData ? `<div class="reply-quote">↩ ${replyData.user}: ${replyData.text}</div>` : ""}
         ${message ? `<span class="msg-text">${user}: ${message}</span>` : `<span class="msg-text msg-text-name">${user}</span>`}
         ${imageHtml}
-        <span class="msg-time">
-            ${time}
-            ${isCurrentUser && chatType === "private" ? `<span class="receipt-ticks" data-status="${status || 'sent'}">${getTicksHtml(status || 'sent')}</span>` : ""}
-        </span>
+        <span class="msg-time">${time}</span>
     `;
 
     // Attach the dropdown to the ⋮ button after innerHTML is set
@@ -838,134 +819,3 @@ socket.on("messageEdited", ({ id, newText }) => {
     bubble.style.background = "rgba(99,102,241,0.15)";
     setTimeout(() => { bubble.style.background = ""; }, 800);
 });
-
-
-// ── READ RECEIPTS ─────────────────────────────────────────────────────────
-
-// Returns the HTML ticks for a given status
-function getTicksHtml(status) {
-    if (status === "read")      return '<span class="ticks ticks-read">✓✓</span>';
-    if (status === "delivered") return '<span class="ticks ticks-delivered">✓✓</span>';
-    return '<span class="ticks ticks-sent">✓</span>';
-}
-
-// Update the receipt ticks on a specific message wrapper
-function updateReceiptStatus(msgId, newStatus) {
-    if (!msgId) return;
-    const wrapper = document.querySelector(`.message-wrapper[data-id="${msgId}"]`);
-    if (!wrapper) return;
-    const ticksEl = wrapper.querySelector(".receipt-ticks");
-    if (!ticksEl) return;
-    ticksEl.dataset.status = newStatus;
-    ticksEl.innerHTML = getTicksHtml(newStatus);
-    wrapper.dataset.status = newStatus;
-}
-
-// When the sender sends optimistically (no id yet), keep track of last unsaved wrapper
-let _lastOptimisticWrapper = null;
-
-// Override addMessage call tracking — after optimistic send, the last sent wrapper has no id
-// We store it so we can patch it when server echoes back the real id
-const _origAddMessage = addMessage;
-// Track last optimistic wrapper by overriding the send flow
-function trackLastOptimistic(wrapper) {
-    _lastOptimisticWrapper = wrapper;
-}
-
-// Called when server echoes back the real message id to the sender
-function updateLastOptimisticMessage(realId, status) {
-    if (!_lastOptimisticWrapper) return;
-    _lastOptimisticWrapper.dataset.id = realId;
-    _lastOptimisticWrapper.dataset.status = status;
-    const ticksEl = _lastOptimisticWrapper.querySelector(".receipt-ticks");
-    if (ticksEl) {
-        ticksEl.dataset.status = status;
-        ticksEl.innerHTML = getTicksHtml(status);
-    }
-    // Also add reactions bar now that we have real id
-    if (!_lastOptimisticWrapper.querySelector(".reactions-bar")) {
-        const reactBar = document.createElement("div");
-        reactBar.className = "reactions-bar";
-        reactBar.dataset.msgId = realId;
-        _lastOptimisticWrapper.appendChild(reactBar);
-    }
-    _lastOptimisticWrapper = null;
-}
-
-// Server tells sender: message was delivered (receiver is online)
-socket.on("receiptDelivered", ({ id }) => {
-    updateReceiptStatus(id, "delivered");
-});
-
-// Server tells sender: message was read
-socket.on("receiptRead", ({ id }) => {
-    updateReceiptStatus(id, "read");
-});
-
-// Server tells sender: all messages to a user are now read
-socket.on("receiptAllRead", ({ from }) => {
-    document.querySelectorAll(".message-wrapper[data-status]").forEach(wrapper => {
-        if (wrapper.dataset.user === username) {
-            const status = wrapper.dataset.status;
-            if (status === "sent" || status === "delivered") {
-                const id = wrapper.dataset.id;
-                if (id) updateReceiptStatus(parseInt(id), "read");
-            }
-        }
-    });
-});
-
-// When user focuses the window while in a private chat → mark all as read
-window.addEventListener("focus", () => {
-    if (chatMode === "private" && privateChatWith) {
-        socket.emit("markAllRead", { from: privateChatWith });
-    }
-});
-
-
-// ── MESSAGE NOTIFICATION TOAST ───────────────────────────────────────────
-
-function showMsgNotification(from, preview, type) {
-    if (from === username) return;
-
-    // Stack notifications — remove old one first
-    const old = document.getElementById("msg-notif-toast");
-    if (old) {
-        clearTimeout(window._notifTimer);
-        old.remove();
-    }
-
-    const typeLabel = type === "group" ? "Group Chat" : "Private Message";
-    const previewShort = preview.length > 45 ? preview.slice(0, 45) + "…" : preview;
-
-    const toast = document.createElement("div");
-    toast.id = "msg-notif-toast";
-    toast.className = "msg-notif-toast";
-    toast.innerHTML = `
-        <span class="msg-notif-icon">💬</span>
-        <div class="msg-notif-text">
-            <span class="msg-notif-from">${from}</span>
-            <span class="msg-notif-type">${typeLabel}</span>
-            <span class="msg-notif-preview">${previewShort}</span>
-        </div>
-    `;
-
-    // Click to open chat
-    toast.onclick = () => {
-        if (type === "private") startPrivateChat(from);
-        else switchMode("group");
-        toast.classList.remove("msg-notif-show");
-        setTimeout(() => toast.remove(), 350);
-    };
-
-    document.body.appendChild(toast);
-
-    // Trigger animation
-    requestAnimationFrame(() => toast.classList.add("msg-notif-show"));
-
-    // Auto-dismiss after 4 seconds
-    window._notifTimer = setTimeout(() => {
-        toast.classList.remove("msg-notif-show");
-        setTimeout(() => toast.remove(), 350);
-    }, 4000);
-}
