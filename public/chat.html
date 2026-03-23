@@ -23,6 +23,16 @@
         <!-- ADDED: close button inside sidebar for mobile -->
         <button class="sidebar-close-btn" onclick="closeSidebar()">✕</button>
 
+        <!-- My Profile Card -->
+        <div class="my-profile-card" id="my-profile-card" onclick="openProfileModal()">
+            <div class="my-profile-avatar" id="sidebar-avatar">?</div>
+            <div class="my-profile-info">
+                <div class="my-profile-name" id="sidebar-name">...</div>
+                <div class="my-profile-status" id="sidebar-status">Hey there! 👋</div>
+            </div>
+            <span class="my-profile-edit-icon">✏️</span>
+        </div>
+
         <h3>Users</h3>
 
         <div class="chat-mode-btns">
@@ -74,6 +84,55 @@
 <!-- Fullscreen image overlay -->
 <div id="image-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:9999;align-items:center;justify-content:center;" onclick="closeImageOverlay()">
     <img id="image-overlay-img" src="" style="max-width:90vw;max-height:90vh;border-radius:10px;box-shadow:0 4px 30px rgba(0,0,0,0.5);">
+</div>
+
+<!-- ── Profile Edit Modal ── -->
+<div id="profile-modal" class="profile-modal-overlay" onclick="closeProfileModal(event)">
+    <div class="profile-modal">
+        <button class="profile-modal-close" onclick="closeProfileModal()">✕</button>
+        <h2 class="profile-modal-title">My Profile</h2>
+
+        <!-- Avatar preview + upload -->
+        <div class="profile-avatar-section">
+            <div class="profile-avatar-big" id="modal-avatar">?</div>
+            <button class="profile-avatar-change-btn" onclick="document.getElementById('avatar-file-input').click()">
+                📷 Change Photo
+            </button>
+            <input type="file" id="avatar-file-input" accept="image/*" style="display:none">
+        </div>
+
+        <div class="profile-fields">
+            <label class="profile-label">Username</label>
+            <input class="profile-input" id="profile-username-display" type="text" disabled>
+
+            <label class="profile-label">Bio</label>
+            <textarea class="profile-input profile-bio-input" id="profile-bio" placeholder="Write something about yourself..." rows="3" maxlength="150"></textarea>
+
+            <label class="profile-label">Status</label>
+            <div class="profile-status-options" id="profile-status-options">
+                <button class="status-opt" data-status="online">🟢 Online</button>
+                <button class="status-opt" data-status="busy">🔴 Busy</button>
+                <button class="status-opt" data-status="away">🟡 Away</button>
+                <button class="status-opt" data-status="invisible">⚫ Invisible</button>
+            </div>
+        </div>
+
+        <button class="profile-save-btn" onclick="saveProfile()">Save Changes</button>
+    </div>
+</div>
+
+<!-- ── View Other User Profile Modal ── -->
+<div id="view-profile-modal" class="profile-modal-overlay" onclick="closeViewProfile(event)">
+    <div class="profile-modal">
+        <button class="profile-modal-close" onclick="closeViewProfile()">✕</button>
+        <div class="profile-avatar-section">
+            <div class="profile-avatar-big" id="view-avatar">?</div>
+        </div>
+        <div class="view-profile-name" id="view-name"></div>
+        <div class="view-profile-status-badge" id="view-status-badge"></div>
+        <div class="view-profile-bio" id="view-bio"></div>
+        <button class="profile-save-btn" id="view-chat-btn" style="margin-top:16px">💬 Send Message</button>
+    </div>
 </div>
 
 <script src="/socket.io/socket.io.js"></script>
