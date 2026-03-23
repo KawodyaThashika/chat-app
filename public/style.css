@@ -1519,3 +1519,134 @@ to{ opacity:1; transform:translateY(0); }
     .pch-name { font-size: 13px; }
     .header-profile-popup { left: 10px; width: calc(100vw - 80px); max-width: 280px; }
 }
+
+
+/* ── Message Bubble Avatar ───────────────────────────────────────────── */
+
+.msg-bubble-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #37415C, #242E49);
+    color: #FDA481;
+    font-size: 13px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    flex-shrink: 0;
+    cursor: pointer;
+    border: 1.5px solid rgba(253,164,129,0.2);
+    transition: transform 0.15s, border-color 0.15s;
+    align-self: flex-end;
+    margin-bottom: 4px;
+}
+
+.msg-bubble-avatar:hover {
+    transform: scale(1.1);
+    border-color: rgba(253,164,129,0.6);
+}
+
+.sent-wrapper .msg-bubble-avatar {
+    background: linear-gradient(135deg, #B4182D, #7a0f1e);
+    color: white;
+    border-color: rgba(253,164,129,0.3);
+}
+
+.msg-bubble-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 50%;
+    display: block;
+}
+
+/* Clickable username in bubble */
+.msg-username-link {
+    font-weight: 600;
+    cursor: pointer;
+    text-decoration: none;
+    transition: opacity 0.15s;
+}
+
+.msg-username-link:hover {
+    opacity: 0.75;
+    text-decoration: underline;
+}
+
+/* ── Message User Profile Popup ── */
+.msg-user-profile-popup {
+    position: fixed;
+    width: 220px;
+    background: rgba(20, 22, 42, 0.98);
+    border: 1px solid rgba(253,164,129,0.25);
+    border-radius: 16px;
+    box-shadow: 0 12px 40px rgba(0,0,0,0.55);
+    z-index: 999999;
+    padding: 16px 14px 14px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+    animation: mupIn 0.18s cubic-bezier(0.34,1.56,0.64,1);
+}
+
+@keyframes mupIn {
+    from { opacity: 0; transform: scale(0.88) translateY(-6px); }
+    to   { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+.mup-avatar {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #B4182D, #54162B);
+    color: white;
+    font-size: 24px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    border: 3px solid rgba(253,164,129,0.35);
+    box-shadow: 0 4px 14px rgba(180,24,45,0.4);
+    margin-bottom: 4px;
+    flex-shrink: 0;
+}
+
+.mup-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 50%;
+    display: block;
+}
+
+.mup-name {
+    font-size: 15px;
+    font-weight: 700;
+    color: #FDA481;
+    text-align: center;
+}
+
+.mup-status {
+    font-size: 12px;
+    color: rgba(255,255,255,0.5);
+    text-align: center;
+}
+
+.mup-bio {
+    font-size: 12px;
+    color: rgba(240,232,224,0.7);
+    text-align: center;
+    line-height: 1.5;
+    padding: 7px 10px;
+    background: rgba(55,65,92,0.35);
+    border-radius: 10px;
+    border: 1px solid rgba(253,164,129,0.1);
+    width: 100%;
+    box-sizing: border-box;
+    margin-top: 4px;
+    word-break: break-word;
+}
