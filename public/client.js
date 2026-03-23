@@ -711,11 +711,24 @@ function openProfileModal() {
     fileInput.onchange = (e) => {
         const file = e.target.files[0];
         if (!file) return;
-        if (file.size > 3 * 1024 * 1024) { showToast("❌ Image too large (max 3MB)"); return; }
+        if (file.size > 5 * 1024 * 1024) { showToast("❌ Image too large (max 5MB)"); return; }
         const reader = new FileReader();
         reader.onload = (ev) => {
-            _pendingAvatar = ev.target.result;
-            document.getElementById("modal-avatar").innerHTML = `<img src="${_pendingAvatar}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`;
+            // Compress image to max 200x200px to keep base64 small
+            const img = new Image();
+            img.onload = () => {
+                const canvas = document.createElement("canvas");
+                const MAX = 200;
+                let w = img.width, h = img.height;
+                if (w > h) { if (w > MAX) { h = Math.round(h * MAX / w); w = MAX; } }
+                else { if (h > MAX) { w = Math.round(w * MAX / h); h = MAX; } }
+                canvas.width = w;
+                canvas.height = h;
+                canvas.getContext("2d").drawImage(img, 0, 0, w, h);
+                _pendingAvatar = canvas.toDataURL("image/jpeg", 0.85);
+                document.getElementById("modal-avatar").innerHTML = `<img src="${_pendingAvatar}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`;
+            };
+            img.src = ev.target.result;
         };
         reader.readAsDataURL(file);
         fileInput.value = "";
@@ -732,24 +745,42 @@ function closeProfileModal(e) {
 function saveProfile() {
     const bio = document.getElementById("profile-bio").value.trim();
     const avatar = _pendingAvatar || myProfile.avatar || null;
+
+    const saveBtn = document.querySelector(".profile-save-btn");
+    if (saveBtn) { saveBtn.textContent = "Saving..."; saveBtn.disabled = true; }
+
     fetch("/profile/save", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "same-origin",
         body: JSON.stringify({ bio, status: _selectedStatus, avatar })
     })
-    .then(res => res.json())
+    .then(res => {
+        if (!res.ok && res.status === 401) throw new Error("Session expired — please refresh the page");
+        return res.json();
+    })
     .then(data => {
+        if (saveBtn) { saveBtn.textContent = "Save Changes"; saveBtn.disabled = false; }
         if (data.ok) {
-            myProfile = { ...myProfile, bio, user_status: _selectedStatus, avatar };
+            const savedAvatar = data.avatarSaved === false ? myProfile.avatar : avatar;
+            myProfile = { ...myProfile, bio, user_status: _selectedStatus, avatar: savedAvatar };
             updateSidebarProfileCard(myProfile);
-            showToast("✅ Profile saved!");
+            if (data.avatarSaved === false && _pendingAvatar) {
+                showToast("✅ Saved (photo too large, not updated)");
+            } else {
+                showToast("✅ Profile saved!");
+            }
+            _pendingAvatar = null;
             document.getElementById("profile-modal").classList.remove("open");
             loadAllUsers();
         } else {
             showToast("❌ " + (data.error || "Failed to save"));
         }
     })
-    .catch(() => showToast("❌ Save failed"));
+    .catch(err => {
+        if (saveBtn) { saveBtn.textContent = "Save Changes"; saveBtn.disabled = false; }
+        showToast("❌ " + (err.message || "Save failed"));
+    });
 }
 
 function openViewProfile(targetUsername) {

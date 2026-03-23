@@ -12,6 +12,9 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
 
+// ✅ Required for Railway/Heroku HTTPS — trust the reverse proxy
+app.set("trust proxy", 1);
+
 app.use(express.static("public"));
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(express.json({ limit: "20mb" }));
@@ -23,13 +26,25 @@ app.use(session({
     resave: false,
     saveUninitialized: false,
     store: sessionStore,
-    cookie: { maxAge: 1000 * 60 * 60 * 24 }
+    cookie: {
+        maxAge: 1000 * 60 * 60 * 24,
+        secure: process.env.NODE_ENV === "production" || process.env.RAILWAY_ENVIRONMENT !== undefined,
+        sameSite: "lax"
+    }
 }));
 
 // ── Auto-add profile columns ──
-db.query("ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar MEDIUMTEXT DEFAULT NULL", () => {});
-db.query("ALTER TABLE users ADD COLUMN IF NOT EXISTS bio VARCHAR(200) DEFAULT ''", () => {});
-db.query("ALTER TABLE users ADD COLUMN IF NOT EXISTS user_status VARCHAR(20) DEFAULT 'online'", () => {});
+db.query("ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar LONGTEXT DEFAULT NULL", (err) => {
+    if (err && err.code !== "ER_DUP_FIELDNAME") console.log("avatar column:", err.message);
+});
+db.query("ALTER TABLE users ADD COLUMN IF NOT EXISTS bio VARCHAR(200) DEFAULT ''", (err) => {
+    if (err && err.code !== "ER_DUP_FIELDNAME") console.log("bio column:", err.message);
+});
+db.query("ALTER TABLE users ADD COLUMN IF NOT EXISTS user_status VARCHAR(20) DEFAULT 'online'", (err) => {
+    if (err && err.code !== "ER_DUP_FIELDNAME") console.log("user_status column:", err.message);
+});
+// Increase packet size for large avatar base64 data
+// Note: max_allowed_packet managed by Railway MySQL
 
 // REGISTER
 app.post("/register", (req, res) => {
@@ -99,14 +114,25 @@ app.get("/profile/:username", (req, res) => {
 
 // ── SAVE profile ──
 app.post("/profile/save", (req, res) => {
-    if (!req.session.username) return res.status(401).json({ error: "Not logged in" });
+    if (!req.session.username) {
+        console.log("Profile save: no session username", req.session);
+        return res.status(401).json({ error: "Not logged in — please refresh and try again" });
+    }
     const { bio, status, avatar } = req.body;
     const safeStatus = ["online","busy","away","invisible"].includes(status) ? status : "online";
+    const safeBio = (bio || "").slice(0, 200);
+    // Limit avatar to ~500KB base64 to avoid packet issues
+    let safeAvatar = avatar || null;
+    if (safeAvatar && safeAvatar.length > 700000) safeAvatar = null;
+
     db.query("UPDATE users SET bio=?, user_status=?, avatar=? WHERE username=?",
-        [bio || "", safeStatus, avatar || null, req.session.username],
+        [safeBio, safeStatus, safeAvatar, req.session.username],
         (err) => {
-            if (err) { console.log(err); return res.status(500).json({ error: "Failed" }); }
-            res.json({ ok: true });
+            if (err) {
+                console.error("Profile save DB error:", err.message, "code:", err.code);
+                return res.status(500).json({ error: "Save failed: " + err.message });
+            }
+            res.json({ ok: true, avatarSaved: !!safeAvatar });
         });
 });
 
