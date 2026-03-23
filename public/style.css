@@ -930,3 +930,82 @@ to{ opacity:1; transform:translateY(0); }
     transform: scale(1.25);
     background: rgba(0,0,0,0.06);
 }
+
+
+/* ── EDIT MESSAGE ────────────────────────────────────────────────────── */
+
+.edit-box-container {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 6px 12px 4px;
+    animation: editBoxIn 0.15s ease;
+}
+
+@keyframes editBoxIn {
+    from { opacity: 0; transform: translateY(-4px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+.edit-textarea {
+    width: 100%;
+    padding: 8px 10px;
+    border-radius: 10px;
+    border: 1.5px solid rgba(99, 102, 241, 0.5);
+    background: rgba(255, 255, 255, 0.9);
+    font-size: 14px;
+    font-family: inherit;
+    resize: none;
+    outline: none;
+    box-shadow: 0 2px 8px rgba(99,102,241,0.12);
+    transition: border-color 0.2s;
+    box-sizing: border-box;
+}
+
+.edit-textarea:focus {
+    border-color: rgba(99, 102, 241, 0.85);
+}
+
+.edit-btn-row {
+    display: flex;
+    justify-content: flex-end;
+    gap: 6px;
+}
+
+.edit-save-btn,
+.edit-cancel-btn {
+    padding: 4px 14px;
+    border-radius: 8px;
+    border: none;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s, transform 0.1s;
+}
+
+.edit-save-btn {
+    background: #6366f1;
+    color: #fff;
+}
+
+.edit-save-btn:hover {
+    background: #4f46e5;
+    transform: scale(1.04);
+}
+
+.edit-cancel-btn {
+    background: rgba(0,0,0,0.08);
+    color: #555;
+}
+
+.edit-cancel-btn:hover {
+    background: rgba(0,0,0,0.14);
+    transform: scale(1.04);
+}
+
+.edited-label {
+    font-size: 11px;
+    color: #999;
+    font-style: italic;
+    margin-left: 4px;
+}
