@@ -257,6 +257,8 @@ function addMessage(user, message, isCurrentUser, timestamp = null, replyTo = nu
     wrapper.dataset.user = user;
     wrapper.dataset.chatType = chatType;
     if (chatPeer) wrapper.dataset.chatPeer = chatPeer;
+    // Store timestamp for 30-min edit window
+    wrapper.dataset.timestamp = timestamp ? new Date(timestamp).getTime() : Date.now();
 
     // CHANGED: replaced 3 separate floating buttons with a single ⋮ menu button
     // inside the bubble's top-right corner (WhatsApp/Telegram style)
@@ -515,6 +517,21 @@ function showMsgMenu(btn, wrapper, isCurrentUser, msgId, chatType, chatPeer, use
     };
     menu.appendChild(reactItem);
 
+    // ── Edit (only sender, only text, within 30 min) ──
+    if (isCurrentUser && msgId && message && !imageData) {
+        const editItem = document.createElement("button");
+        editItem.innerHTML = "✏️&nbsp; Edit message";
+        editItem.onclick = () => {
+            menu.remove();
+            if (!canEdit(wrapper)) {
+                showToast("⏰ Cannot edit — 30 minute limit exceeded");
+                return;
+            }
+            startEditMessage(wrapper, msgId, message, chatType, chatPeer);
+        };
+        menu.appendChild(editItem);
+    }
+
     // ── Reply ──
     const replyItem = document.createElement("button");
     replyItem.innerHTML = "↩&nbsp; Reply";
@@ -700,4 +717,92 @@ function updateReactionBar(msgId) {
 socket.on("reactionUpdate", ({ msgId, reactionMap }) => {
     reactions[msgId] = reactionMap;
     updateReactionBar(msgId);
+});
+
+
+// ── EDIT MESSAGE ─────────────────────────────────────────────────────────
+
+const EDIT_TIME_LIMIT_MS = 30 * 60 * 1000; // 30 minutes
+
+function canEdit(wrapper) {
+    const ts = parseInt(wrapper.dataset.timestamp || "0");
+    return Date.now() - ts < EDIT_TIME_LIMIT_MS;
+}
+
+function startEditMessage(wrapper, msgId, currentText, chatType, chatPeer) {
+    // Remove any existing edit box
+    const existing = document.getElementById("edit-box-container");
+    if (existing) existing.remove();
+
+    const bubble = wrapper.querySelector(".sent, .message");
+    const msgTextEl = bubble ? bubble.querySelector(".msg-text") : null;
+
+    // Create inline edit box
+    const editContainer = document.createElement("div");
+    editContainer.id = "edit-box-container";
+    editContainer.className = "edit-box-container";
+
+    const textarea = document.createElement("textarea");
+    textarea.className = "edit-textarea";
+    textarea.value = currentText;
+    textarea.rows = 2;
+
+    const btnRow = document.createElement("div");
+    btnRow.className = "edit-btn-row";
+
+    const saveBtn = document.createElement("button");
+    saveBtn.className = "edit-save-btn";
+    saveBtn.textContent = "Save";
+
+    const cancelBtn = document.createElement("button");
+    cancelBtn.className = "edit-cancel-btn";
+    cancelBtn.textContent = "Cancel";
+
+    btnRow.appendChild(cancelBtn);
+    btnRow.appendChild(saveBtn);
+    editContainer.appendChild(textarea);
+    editContainer.appendChild(btnRow);
+
+    // Insert edit box right after the bubble
+    wrapper.insertBefore(editContainer, wrapper.querySelector(".reactions-bar") || null);
+    textarea.focus();
+    textarea.setSelectionRange(textarea.value.length, textarea.value.length);
+
+    cancelBtn.onclick = () => editContainer.remove();
+
+    saveBtn.onclick = () => {
+        const newText = textarea.value.trim();
+        if (!newText || newText === currentText) {
+            editContainer.remove();
+            return;
+        }
+        socket.emit("editMessage", { id: msgId, newText, chatType, to: chatPeer });
+        editContainer.remove();
+    };
+
+    // Also save on Ctrl+Enter
+    textarea.addEventListener("keydown", (e) => {
+        if (e.key === "Enter" && e.ctrlKey) saveBtn.click();
+        if (e.key === "Escape") cancelBtn.click();
+    });
+}
+
+// Server confirms edit — update the message text in UI
+socket.on("messageEdited", ({ id, newText }) => {
+    const wrapper = document.querySelector(`.message-wrapper[data-id="${id}"]`);
+    if (!wrapper) return;
+
+    const bubble = wrapper.querySelector(".sent, .message");
+    if (!bubble) return;
+    const msgTextEl = bubble.querySelector(".msg-text");
+    if (!msgTextEl) return;
+
+    const user = wrapper.dataset.user;
+    // Update text and add "(edited)" label
+    msgTextEl.innerHTML = `${user}: ${newText} <span class="edited-label">(edited)</span>`;
+
+    // Animate the update
+    bubble.style.transition = "background 0.3s";
+    bubble.style.background = "rgba(99,102,241,0.15)";
+    setTimeout(() => { bubble.style.background = ""; }, 800);
 });
