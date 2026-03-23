@@ -78,51 +78,6 @@ app.get("/all-users", (req, res) => {
     });
 });
 
-// ── Auto-add profile columns if not exist ──
-db.query("ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar MEDIUMTEXT DEFAULT NULL", () => {});
-db.query("ALTER TABLE users ADD COLUMN IF NOT EXISTS bio VARCHAR(200) DEFAULT NULL", () => {});
-db.query("ALTER TABLE users ADD COLUMN IF NOT EXISTS status VARCHAR(20) DEFAULT 'online'", () => {});
-
-// ── GET my profile (must be before /profile/:username) ──
-app.get("/profile/me", (req, res) => {
-    if (!req.session.username) return res.status(401).json({ error: "Not logged in" });
-    db.query("SELECT username, avatar, bio, status FROM users WHERE username=?",
-        [req.session.username], (err, rows) => {
-            if (err || rows.length === 0) return res.json({});
-            res.json(rows[0]);
-        });
-});
-
-// ── GET all users with profiles (for sidebar) ──
-app.get("/all-users-with-profiles", (req, res) => {
-    db.query("SELECT username, avatar, bio, status FROM users", (err, result) => {
-        if (err) return res.json([]);
-        res.json(result);
-    });
-});
-
-// ── GET any user profile ──
-app.get("/profile/:username", (req, res) => {
-    db.query("SELECT username, avatar, bio, status FROM users WHERE username=?",
-        [req.params.username], (err, rows) => {
-            if (err || rows.length === 0) return res.json({});
-            res.json(rows[0]);
-        });
-});
-
-// ── SAVE profile ──
-app.post("/profile/save", (req, res) => {
-    if (!req.session.username) return res.status(401).json({ error: "Not logged in" });
-    const { bio, status, avatar } = req.body;
-    const safeStatus = ["online","busy","away","invisible"].includes(status) ? status : "online";
-    db.query("UPDATE users SET bio=?, status=?, avatar=? WHERE username=?",
-        [bio || "", safeStatus, avatar || null, req.session.username],
-        (err) => {
-            if (err) return res.status(500).json({ error: "Failed" });
-            res.json({ ok: true });
-        });
-});
-
 app.get("/private-messages/:user1/:user2", (req, res) => {
     const { user1, user2 } = req.params;
     const sql = `SELECT * FROM private_messages 
@@ -140,6 +95,17 @@ let users = {};
 
 io.on("connection", (socket) => {
 
+    socket.on("join", (username) => {
+        socket.username = username;
+        users[username] = socket.id;
+        io.emit("users", Object.keys(users));
+
+        // Load group messages
+        db.query("SELECT * FROM messages ORDER BY timestamp ASC LIMIT 50", (err, results) => {
+            if (err) console.log(err);
+            else socket.emit("previousMessages", results);
+        });
+    });
 
     // group message
     socket.on("message", ({ text, replyTo, imageData, imageType }) => {
@@ -249,58 +215,12 @@ io.on("connection", (socket) => {
         }
     });
 
-
-    // ── EDIT MESSAGE ──────────────────────────────────────────────────────────
-    const EDIT_LIMIT_MS = 30 * 60 * 1000; // 30 minutes
-
-    socket.on("editMessage", ({ id, newText, chatType, to }) => {
-        const user = socket.username;
-        if (!user || !id || !newText) return;
-
-        if (chatType === "private") {
-            // Check timestamp and sender for private messages
-            db.query("SELECT sender, timestamp FROM private_messages WHERE id=?", [id], (err, rows) => {
-                if (err || rows.length === 0) return;
-                const row = rows[0];
-                if (row.sender !== user) return;
-                const age = Date.now() - new Date(row.timestamp).getTime();
-                if (age > EDIT_LIMIT_MS) {
-                    socket.emit("editError", { message: "Cannot edit — 30 minute limit exceeded" });
-                    return;
-                }
-                db.query("UPDATE private_messages SET message=? WHERE id=?", [newText, id], (err2) => {
-                    if (err2) return;
-                    socket.emit("messageEdited", { id, newText });
-                    const toSocketId = users[to];
-                    if (toSocketId) io.to(toSocketId).emit("messageEdited", { id, newText });
-                });
-            });
-        } else {
-            // Group message
-            db.query("SELECT user, timestamp FROM messages WHERE id=?", [id], (err, rows) => {
-                if (err || rows.length === 0) return;
-                const row = rows[0];
-                if (row.user !== user) return;
-                const age = Date.now() - new Date(row.timestamp).getTime();
-                if (age > EDIT_LIMIT_MS) {
-                    socket.emit("editError", { message: "Cannot edit — 30 minute limit exceeded" });
-                    return;
-                }
-                db.query("UPDATE messages SET message=? WHERE id=?", [newText, id], (err2) => {
-                    if (err2) return;
-                    io.emit("messageEdited", { id, newText });
-                });
-            });
-        }
-    });
-
     socket.on("disconnect", () => {
         if (socket.username) {
             delete users[socket.username];
             io.emit("users", Object.keys(users));
         }
     });
-
 });
 
 const PORT = process.env.PORT || 3000; // ✅ use env PORT too
