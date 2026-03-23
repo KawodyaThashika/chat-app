@@ -311,10 +311,19 @@ function addMessage(user, message, isCurrentUser, timestamp = null, replyTo = nu
         imageHtml = `<div class="msg-image-wrap"><img class="msg-image" src="${src}" alt="image" onclick="openImageFull(this.src)"/></div>`;
     }
 
+    // Build avatar for this message's sender
+    const p = userProfiles[user] || {};
+    const msgAvatarHtml = p.avatar
+        ? `<img src="${p.avatar}" alt="">`
+        : `<span>${user.charAt(0).toUpperCase()}</span>`;
+
+    // Make username clickable to show profile
+    const userNameHtml = `<span class="msg-username-link" onclick="showMsgUserProfile(event,'${user}')">${user}</span>`;
+
     div.innerHTML = `
         <button class="msg-menu-btn" title="Options">⋮</button>
         ${replyData ? `<div class="reply-quote">↩ ${replyData.user}: ${replyData.text}</div>` : ""}
-        ${message ? `<span class="msg-text">${user}: ${message}</span>` : `<span class="msg-text msg-text-name">${user}</span>`}
+        ${message ? `<span class="msg-text">${userNameHtml}: ${message}</span>` : `<span class="msg-text msg-text-name">${userNameHtml}</span>`}
         ${imageHtml}
         <span class="msg-time">${time}</span>
     `;
@@ -324,7 +333,20 @@ function addMessage(user, message, isCurrentUser, timestamp = null, replyTo = nu
         showMsgMenu(div.querySelector(".msg-menu-btn"), wrapper, isCurrentUser, msgId, chatType, chatPeer, user, message, imageData, imageType);
     });
 
-    wrapper.appendChild(div);
+    // Avatar beside bubble (clickable)
+    const avatarEl = document.createElement("div");
+    avatarEl.className = "msg-bubble-avatar";
+    avatarEl.innerHTML = msgAvatarHtml;
+    avatarEl.title = user;
+    avatarEl.onclick = (e) => { e.stopPropagation(); showMsgUserProfile(e, user); };
+
+    if (isCurrentUser) {
+        wrapper.appendChild(div);
+        wrapper.appendChild(avatarEl);
+    } else {
+        wrapper.appendChild(avatarEl);
+        wrapper.appendChild(div);
+    }
 
     if (msgId) {
         const reactBar = document.createElement("div");
@@ -903,3 +925,67 @@ socket.on("users", (usersArr) => {
     // Also refresh private chat header if open
     if (privateChatWith) updatePrivateChatHeader(privateChatWith);
 });
+
+
+// ── Message User Profile Popup ────────────────────────────────────────────
+
+let _msgProfilePopup = null;
+
+function showMsgUserProfile(e, targetUser) {
+    e.stopPropagation();
+
+    // Remove existing popup
+    if (_msgProfilePopup) { _msgProfilePopup.remove(); _msgProfilePopup = null; }
+
+    const p = userProfiles[targetUser] || {};
+    const isOnline = onlineUsers.includes(targetUser);
+    const isMe = targetUser === username;
+    const profile = isMe ? myProfile : p;
+
+    const popup = document.createElement("div");
+    popup.className = "msg-user-profile-popup";
+
+    const avatarHtml = profile.avatar
+        ? `<img src="${profile.avatar}" alt="">`
+        : `<span>${targetUser.charAt(0).toUpperCase()}</span>`;
+
+    const statusLabels = { online:"🟢 Online", busy:"🔴 Busy", away:"🟡 Away", invisible:"⚫ Invisible" };
+    const statusText = isMe
+        ? (statusLabels[myProfile.user_status] || "🟢 Online")
+        : (!isOnline ? "⚫ Offline" : (statusLabels[profile.user_status] || "🟢 Online"));
+    const bioText = (profile.bio && profile.bio.trim()) ? profile.bio : "No bio yet.";
+
+    popup.innerHTML = `
+        <div class="mup-avatar">${avatarHtml}</div>
+        <div class="mup-name">${targetUser}${isMe ? " (You)" : ""}</div>
+        <div class="mup-status">${statusText}</div>
+        <div class="mup-bio">${bioText}</div>
+    `;
+
+    document.body.appendChild(popup);
+    _msgProfilePopup = popup;
+
+    // Position near the click point
+    const rect = e.target.getBoundingClientRect ? e.target.getBoundingClientRect() : { bottom: e.clientY, left: e.clientX, right: e.clientX };
+    let top = rect.bottom + window.scrollY + 6;
+    let left = rect.left + window.scrollX;
+
+    // Keep on screen
+    const popW = 220;
+    if (left + popW > window.innerWidth - 8) left = window.innerWidth - popW - 8;
+    if (left < 8) left = 8;
+    // If near bottom, show above
+    if (top + 180 > window.innerHeight + window.scrollY) {
+        top = rect.top + window.scrollY - 180;
+    }
+
+    popup.style.top = top + "px";
+    popup.style.left = left + "px";
+
+    // Close on outside click
+    setTimeout(() => {
+        document.addEventListener("click", () => {
+            if (_msgProfilePopup) { _msgProfilePopup.remove(); _msgProfilePopup = null; }
+        }, { once: true });
+    }, 0);
+}
