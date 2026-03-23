@@ -179,6 +179,42 @@ io.on("connection", (socket) => {
         });
     });
 
+    // ── EMOJI REACTIONS ─────────────────────────────────────────────────────
+    // In-memory store: { msgId: { emoji: Set<username> } }
+    // (A real app would persist to DB; this keeps it simple)
+    socket.on("react", ({ msgId, emoji, chatType, to }) => {
+        if (!msgId || !emoji) return;
+        const user = socket.username;
+        if (!user) return;
+
+        if (!io._reactions) io._reactions = {};
+        if (!io._reactions[msgId]) io._reactions[msgId] = {};
+        if (!io._reactions[msgId][emoji]) io._reactions[msgId][emoji] = new Set();
+
+        const set = io._reactions[msgId][emoji];
+        // Toggle: if already reacted, remove; otherwise add
+        if (set.has(user)) {
+            set.delete(user);
+        } else {
+            set.add(user);
+        }
+
+        // Build a plain object to send: { emoji: [usernames] }
+        const reactionMap = {};
+        Object.entries(io._reactions[msgId]).forEach(([em, usersSet]) => {
+            if (usersSet.size > 0) reactionMap[em] = [...usersSet];
+        });
+
+        // Broadcast to everyone (group) or both parties (private)
+        if (chatType === "private" && to) {
+            const toSocketId = users[to];
+            socket.emit("reactionUpdate", { msgId, reactionMap });
+            if (toSocketId) io.to(toSocketId).emit("reactionUpdate", { msgId, reactionMap });
+        } else {
+            io.emit("reactionUpdate", { msgId, reactionMap });
+        }
+    });
+
     socket.on("disconnect", () => {
         if (socket.username) {
             delete users[socket.username];
