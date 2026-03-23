@@ -37,13 +37,11 @@ function getDateLabel(timestamp) {
     if (isSameDay(msgDate, today)) return "Today";
     if (isSameDay(msgDate, yesterday)) return "Yesterday";
 
-    // Older — show full date like "March 10, 2026"
     return msgDate.toLocaleDateString([], {
         year: 'numeric', month: 'long', day: 'numeric'
     });
 }
 
-// ✅ Show date separator if date changed
 function showDateSeparatorIfNeeded(timestamp) {
     const label = getDateLabel(timestamp);
     if (label !== lastShownDate) {
@@ -62,7 +60,6 @@ function switchMode(mode) {
 
     document.getElementById("groupBtn").classList.toggle("active", mode === "group");
     document.getElementById("privateBtn").classList.toggle("active", mode === "private");
-    // NEW: toggle saved button active state
     document.getElementById("savedBtn").classList.toggle("active", mode === "saved");
 
     const messagesDiv = document.getElementById("messages");
@@ -72,7 +69,6 @@ function switchMode(mode) {
         document.getElementById("chat-header-text").textContent = "👥 Group Chat";
         socket.emit("join", username);
     } else if (mode === "saved") {
-        // NEW: load saved messages view
         document.getElementById("chat-header-text").textContent = "📌 Saved Messages";
         loadSavedMessages();
     } else {
@@ -99,7 +95,6 @@ function startPrivateChat(targetUser) {
     .then(res => res.json())
     .then(messages => {
         messages.forEach(m => {
-            // CHANGED: pass m.id, chatType and peer for delete targeting
             addMessage(m.sender, m.message, m.sender === username, m.timestamp, m.reply_to, m.image_data, m.image_type, m.id, "private", targetUser);
         });
     });
@@ -152,26 +147,30 @@ function loadAllUsers() {
 
 socket.on("message", (data) => {
     if (chatMode === "group") {
-        // CHANGED: pass data.id, chatType for delete button
         addMessage(data.user, data.text, data.user === username, null, data.replyTo, data.imageData, data.imageType, data.id, "group", null);
+    } else if (data.user !== username) {
+        // Not in group chat — show notification
+        const preview = data.imageData ? "📷 Image" : (data.text || "");
+        showMsgNotification(data.user, preview, "group");
     }
 });
 
 socket.on("privateMessage", ({ id, from, message, replyTo, imageData, imageType }) => {
     if (from === username) return;
     if (chatMode === "private" && from === privateChatWith) {
-        // CHANGED: pass id, chatType and sender for delete button
         addMessage(from, message, false, null, replyTo, imageData, imageType, id, "private", from);
     } else {
         unreadCounts[from] = (unreadCounts[from] || 0) + 1;
         loadAllUsers();
+        // Show notification toast
+        const preview = imageData ? "📷 Image" : (message || "");
+        showMsgNotification(from, preview, "private");
     }
 });
 
 socket.on("previousMessages", (messages) => {
     if (chatMode === "group") {
         document.getElementById("messages").innerHTML = "";
-        // CHANGED: pass m.id and chatType for delete button
         messages.forEach(m => addMessage(m.user, m.message, m.user === username, m.timestamp, m.reply_to, m.image_data, m.image_type, m.id, "group", null));
     }
 });
@@ -194,7 +193,6 @@ function sendMsg(){
     const msgInput = document.getElementById("msg");
     const msg = msgInput.value.trim();
 
-    // Check if we have a pending image
     const pendingImage = window._pendingImage;
 
     if(!msg && !pendingImage) return;
@@ -214,14 +212,12 @@ function sendMsg(){
             imageData: pendingImage ? pendingImage.data : null,
             imageType: pendingImage ? pendingImage.type : null
         });
-        // CHANGED: id is null until server echoes back; delete-for-me still works locally via wrapper removal
         addMessage(username, msg, true, null, replyingTo, pendingImage ? pendingImage.data : null, pendingImage ? pendingImage.type : null, null, "private", privateChatWith);
     } else {
         alert("Please select a user to chat with!");
         return;
     }
 
-    // Clear pending image
     window._pendingImage = null;
     document.getElementById("image-preview-area").style.display = "none";
     document.getElementById("image-preview-area").innerHTML = "";
@@ -239,7 +235,6 @@ document.getElementById("msg").addEventListener("input", () => {
     }, 2000);
 });
 
-// CHANGED: added msgId, chatType, chatPeer params for delete functionality
 function addMessage(user, message, isCurrentUser, timestamp = null, replyTo = null, imageData = null, imageType = null, msgId = null, chatType = "group", chatPeer = null) {
     showDateSeparatorIfNeeded(timestamp);
 
@@ -249,38 +244,28 @@ function addMessage(user, message, isCurrentUser, timestamp = null, replyTo = nu
         ? new Date(timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
         : new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
-    // Wrapper div
     const wrapper = document.createElement("div");
     wrapper.className = isCurrentUser ? "message-wrapper sent-wrapper" : "message-wrapper";
-    // CHANGED: store id and meta on the element for delete operations
     if (msgId) wrapper.dataset.id = msgId;
     wrapper.dataset.user = user;
     wrapper.dataset.chatType = chatType;
     if (chatPeer) wrapper.dataset.chatPeer = chatPeer;
-    // Store timestamp for 30-min edit window
     wrapper.dataset.timestamp = timestamp ? new Date(timestamp).getTime() : Date.now();
 
-    // CHANGED: replaced 3 separate floating buttons with a single ⋮ menu button
-    // inside the bubble's top-right corner (WhatsApp/Telegram style)
-
-    // Message bubble
     const div = document.createElement("div");
     div.className = isCurrentUser ? "sent" : "message";
 
-    // Parse replyTo if it's a JSON string
     let replyData = replyTo;
     if (typeof replyTo === "string") {
         try { replyData = JSON.parse(replyTo); } catch { replyData = null; }
     }
 
-    // Build image HTML if present
     let imageHtml = "";
     if (imageData) {
         const src = imageData.startsWith("data:") ? imageData : `data:${imageType || "image/png"};base64,${imageData}`;
         imageHtml = `<div class="msg-image-wrap"><img class="msg-image" src="${src}" alt="image" onclick="openImageFull(this.src)"/></div>`;
     }
 
-    // CHANGED: ⋮ menu button injected inside the bubble (top-right corner)
     div.innerHTML = `
         <button class="msg-menu-btn" title="Options">⋮</button>
         ${replyData ? `<div class="reply-quote">↩ ${replyData.user}: ${replyData.text}</div>` : ""}
@@ -289,7 +274,6 @@ function addMessage(user, message, isCurrentUser, timestamp = null, replyTo = nu
         <span class="msg-time">${time}</span>
     `;
 
-    // Attach the dropdown to the ⋮ button after innerHTML is set
     const menuBtn = div.querySelector(".msg-menu-btn");
     menuBtn.addEventListener("click", (e) => {
         e.stopPropagation();
@@ -298,13 +282,11 @@ function addMessage(user, message, isCurrentUser, timestamp = null, replyTo = nu
 
     wrapper.appendChild(div);
 
-    // Reactions bar (shows existing reactions for this message)
     if (msgId) {
         const reactBar = document.createElement("div");
         reactBar.className = "reactions-bar";
         reactBar.dataset.msgId = msgId;
         wrapper.appendChild(reactBar);
-        // Render any already-known reactions
         renderReactions(msgId, reactBar);
     }
 
@@ -334,7 +316,7 @@ function cancelReply() {
     document.getElementById("reply-box").classList.remove("active");
     document.getElementById("reply-box-text").textContent = "";
 }
-// ---- Image picker ----
+
 function openImagePicker() {
     document.getElementById("image-file-input").click();
 }
@@ -346,7 +328,6 @@ document.addEventListener("DOMContentLoaded", () => {
             const file = e.target.files[0];
             if (!file) return;
 
-            // Max 5MB
             if (file.size > 5 * 1024 * 1024) {
                 alert("Image too large! Max size is 5MB.");
                 fileInput.value = "";
@@ -356,10 +337,8 @@ document.addEventListener("DOMContentLoaded", () => {
             const reader = new FileReader();
             reader.onload = (ev) => {
                 const dataUrl = ev.target.result;
-                // Store as pending image
                 window._pendingImage = { data: dataUrl, type: file.type };
 
-                // Show preview
                 const previewArea = document.getElementById("image-preview-area");
                 previewArea.style.display = "flex";
                 previewArea.innerHTML = `
@@ -380,10 +359,8 @@ function cancelImage() {
     previewArea.innerHTML = "";
 }
 
+// ── Saved Messages ────────────────────────────────────────────────────────
 
-// ── NEW: Saved Messages feature ───────────────────────────────────────────
-
-// Save a message to the server (called by the 📌 button)
 function saveMessage(user, message, imageData, imageType) {
     const source = chatMode === "group"
         ? "Group Chat"
@@ -411,7 +388,6 @@ function saveMessage(user, message, imageData, imageType) {
     .catch(err => showToast("❌ " + err.message));
 }
 
-// Load and render all saved messages
 function loadSavedMessages() {
     const messagesDiv = document.getElementById("messages");
     messagesDiv.innerHTML = `<div class="info-msg" style="margin-top:20px;">Loading...</div>`;
@@ -432,7 +408,6 @@ function loadSavedMessages() {
     });
 }
 
-// Render a single saved message card
 function addSavedItem(item) {
     const messagesDiv = document.getElementById("messages");
 
@@ -466,7 +441,6 @@ function addSavedItem(item) {
     messagesDiv.appendChild(card);
 }
 
-// Delete a saved message
 function deleteSavedMessage(id, btn) {
     fetch(`/saved-messages/${id}`, { method: "DELETE" })
     .then(res => res.json())
@@ -481,7 +455,8 @@ function deleteSavedMessage(id, btn) {
     });
 }
 
-// Brief toast notification
+// ── Toast ─────────────────────────────────────────────────────────────────
+
 function showToast(msg) {
     let toast = document.getElementById("toast-msg");
     if (!toast) {
@@ -495,12 +470,52 @@ function showToast(msg) {
     window._toastTimer = setTimeout(() => { toast.className = ""; }, 2500);
 }
 
+// ── Message Notification Toast ────────────────────────────────────────────
 
-// ── NEW: Delete message feature ───────────────────────────────────────────
+function showMsgNotification(from, preview, type) {
+    if (from === username) return;
 
-// CHANGED: unified ⋮ dropdown — Reply, Save, Delete for me, Delete for everyone
+    const old = document.getElementById("msg-notif-toast");
+    if (old) {
+        clearTimeout(window._notifTimer);
+        old.remove();
+    }
+
+    const typeLabel = type === "group" ? "Group Chat" : "Private Message";
+    const previewShort = preview.length > 45 ? preview.slice(0, 45) + "…" : preview;
+
+    const toast = document.createElement("div");
+    toast.id = "msg-notif-toast";
+    toast.className = "msg-notif-toast";
+    toast.innerHTML = `
+        <span class="msg-notif-icon">💬</span>
+        <div class="msg-notif-text">
+            <span class="msg-notif-from">${from}</span>
+            <span class="msg-notif-type">${typeLabel}</span>
+            <span class="msg-notif-preview">${previewShort}</span>
+        </div>
+    `;
+
+    toast.onclick = () => {
+        if (type === "private") startPrivateChat(from);
+        else switchMode("group");
+        toast.classList.remove("msg-notif-show");
+        setTimeout(() => toast.remove(), 350);
+        clearTimeout(window._notifTimer);
+    };
+
+    document.body.appendChild(toast);
+    requestAnimationFrame(() => toast.classList.add("msg-notif-show"));
+
+    window._notifTimer = setTimeout(() => {
+        toast.classList.remove("msg-notif-show");
+        setTimeout(() => toast.remove(), 350);
+    }, 4000);
+}
+
+// ── Delete Message ────────────────────────────────────────────────────────
+
 function showMsgMenu(btn, wrapper, isCurrentUser, msgId, chatType, chatPeer, user, message, imageData, imageType) {
-    // Remove any already-open menu
     const existing = document.getElementById("msg-menu");
     if (existing) existing.remove();
 
@@ -544,7 +559,7 @@ function showMsgMenu(btn, wrapper, isCurrentUser, msgId, chatType, chatPeer, use
     saveItem.onclick = () => { saveMessage(user, message, imageData, imageType); menu.remove(); };
     menu.appendChild(saveItem);
 
-    // ── Delete for me (always available) ──
+    // ── Delete for me ──
     const forMe = document.createElement("button");
     forMe.innerHTML = "🙈&nbsp; Delete for me";
     forMe.onclick = () => {
@@ -556,7 +571,7 @@ function showMsgMenu(btn, wrapper, isCurrentUser, msgId, chatType, chatPeer, use
     };
     menu.appendChild(forMe);
 
-    // ── Delete for everyone (only sender, only if DB id exists) ──
+    // ── Delete for everyone ──
     if (isCurrentUser && msgId) {
         const forAll = document.createElement("button");
         forAll.innerHTML = "🗑️&nbsp; Delete for everyone";
@@ -572,7 +587,6 @@ function showMsgMenu(btn, wrapper, isCurrentUser, msgId, chatType, chatPeer, use
         menu.appendChild(forAll);
     }
 
-    // Position: just below the ⋮ button, aligned to its right edge
     document.body.appendChild(menu);
     const rect = btn.getBoundingClientRect();
     const menuW = menu.offsetWidth;
@@ -581,13 +595,11 @@ function showMsgMenu(btn, wrapper, isCurrentUser, msgId, chatType, chatPeer, use
     menu.style.top  = (rect.bottom + window.scrollY + 4) + "px";
     menu.style.left = left + "px";
 
-    // Close when clicking anywhere else
     setTimeout(() => {
         document.addEventListener("click", () => menu.remove(), { once: true });
     }, 0);
 }
 
-// NEW: Remove a group message from the UI when server confirms deletion
 socket.on("messageDeleted", ({ id }) => {
     const wrapper = document.querySelector(`.message-wrapper[data-id="${id}"]`);
     if (wrapper) {
@@ -598,7 +610,6 @@ socket.on("messageDeleted", ({ id }) => {
     }
 });
 
-// NEW: Remove a private message from the UI when server confirms deletion
 socket.on("privateMessageDeleted", ({ id }) => {
     const wrapper = document.querySelector(`.message-wrapper[data-id="${id}"]`);
     if (wrapper) {
@@ -609,11 +620,9 @@ socket.on("privateMessageDeleted", ({ id }) => {
     }
 });
 
-
-// ── NEW: Mobile sidebar open/close ───────────────────────────────────────
+// ── Mobile Sidebar ────────────────────────────────────────────────────────
 
 function openSidebar() {
-    // FIXED: only open as drawer on mobile; on desktop sidebar is always visible
     if (!window.matchMedia("(max-width: 700px)").matches) return;
     document.getElementById("sidebar").classList.add("open");
     document.getElementById("sidebar-overlay").classList.add("active");
@@ -624,28 +633,24 @@ function closeSidebar() {
     document.getElementById("sidebar-overlay").classList.remove("active");
 }
 
-// Auto-close sidebar after selecting a chat mode on mobile
-const _origSwitchMode = switchMode;
-// Wrap switchMode to close sidebar on mobile after selection
 const _mobileMediaQuery = window.matchMedia("(max-width: 700px)");
 document.addEventListener("DOMContentLoaded", () => {
-    // Close sidebar when a mode button or user is clicked on mobile
     document.querySelectorAll(".mode-btn").forEach(btn => {
         btn.addEventListener("click", () => {
             if (_mobileMediaQuery.matches) closeSidebar();
         });
     });
 });
-// ── EMOJI REACTIONS ──────────────────────────────────────────────────────
+
+// ── Emoji Reactions ───────────────────────────────────────────────────────
 
 const REACTION_EMOJIS = ["❤️", "😂", "😮", "😢", "😡", "👍", "🎉", "🔥"];
 
 function showEmojiPicker(anchorEl, msgId, chatType, chatPeer) {
-    // Remove any existing picker
     const existing = document.getElementById("emoji-picker");
     if (existing) existing.remove();
 
-    if (!msgId) return; // can't react to a message without an id
+    if (!msgId) return;
 
     const picker = document.createElement("div");
     picker.id = "emoji-picker";
@@ -666,11 +671,9 @@ function showEmojiPicker(anchorEl, msgId, chatType, chatPeer) {
 
     document.body.appendChild(picker);
 
-    // Position near the anchor
     const rect = anchorEl.getBoundingClientRect();
     let top = rect.bottom + window.scrollY + 6;
     let left = rect.left + window.scrollX;
-    // Keep on screen
     const pickerW = 280;
     if (left + pickerW > window.innerWidth - 8) left = window.innerWidth - pickerW - 8;
     if (left < 4) left = 4;
@@ -698,7 +701,6 @@ function renderReactions(msgId, barEl) {
         chip.title = users.join(", ");
         chip.innerHTML = `${emoji}<span class="reaction-count">${users.length}</span>`;
         chip.onclick = () => {
-            // Get the wrapper to retrieve chatType/chatPeer
             const wrapper = barEl.closest(".message-wrapper");
             const chatType = wrapper ? wrapper.dataset.chatType : "group";
             const chatPeer = wrapper ? wrapper.dataset.chatPeer : null;
@@ -713,16 +715,14 @@ function updateReactionBar(msgId) {
     if (bar) renderReactions(msgId, bar);
 }
 
-// Server broadcasts reaction updates
 socket.on("reactionUpdate", ({ msgId, reactionMap }) => {
     reactions[msgId] = reactionMap;
     updateReactionBar(msgId);
 });
 
+// ── Edit Message ──────────────────────────────────────────────────────────
 
-// ── EDIT MESSAGE ─────────────────────────────────────────────────────────
-
-const EDIT_TIME_LIMIT_MS = 30 * 60 * 1000; // 30 minutes
+const EDIT_TIME_LIMIT_MS = 30 * 60 * 1000;
 
 function canEdit(wrapper) {
     const ts = parseInt(wrapper.dataset.timestamp || "0");
@@ -730,14 +730,9 @@ function canEdit(wrapper) {
 }
 
 function startEditMessage(wrapper, msgId, currentText, chatType, chatPeer) {
-    // Remove any existing edit box
     const existing = document.getElementById("edit-box-container");
     if (existing) existing.remove();
 
-    const bubble = wrapper.querySelector(".sent, .message");
-    const msgTextEl = bubble ? bubble.querySelector(".msg-text") : null;
-
-    // Create inline edit box
     const editContainer = document.createElement("div");
     editContainer.id = "edit-box-container";
     editContainer.className = "edit-box-container";
@@ -763,7 +758,6 @@ function startEditMessage(wrapper, msgId, currentText, chatType, chatPeer) {
     editContainer.appendChild(textarea);
     editContainer.appendChild(btnRow);
 
-    // Insert edit box right after the bubble
     wrapper.insertBefore(editContainer, wrapper.querySelector(".reactions-bar") || null);
     textarea.focus();
     textarea.setSelectionRange(textarea.value.length, textarea.value.length);
@@ -780,14 +774,12 @@ function startEditMessage(wrapper, msgId, currentText, chatType, chatPeer) {
         editContainer.remove();
     };
 
-    // Also save on Ctrl+Enter
     textarea.addEventListener("keydown", (e) => {
         if (e.key === "Enter" && e.ctrlKey) saveBtn.click();
         if (e.key === "Escape") cancelBtn.click();
     });
 }
 
-// Server confirms edit — update the message text in UI
 socket.on("messageEdited", ({ id, newText }) => {
     const wrapper = document.querySelector(`.message-wrapper[data-id="${id}"]`);
     if (!wrapper) return;
@@ -798,10 +790,8 @@ socket.on("messageEdited", ({ id, newText }) => {
     if (!msgTextEl) return;
 
     const user = wrapper.dataset.user;
-    // Update text and add "(edited)" label
     msgTextEl.innerHTML = `${user}: ${newText} <span class="edited-label">(edited)</span>`;
 
-    // Animate the update
     bubble.style.transition = "background 0.3s";
     bubble.style.background = "rgba(99,102,241,0.15)";
     setTimeout(() => { bubble.style.background = ""; }, 800);
