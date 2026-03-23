@@ -60,6 +60,10 @@ function showDateSeparatorIfNeeded(timestamp) {
 function switchMode(mode) {
     chatMode = mode;
     privateChatWith = null;
+    closeHeaderProfile();
+    // Restore plain header
+    document.getElementById("chat-header-text").style.display = "";
+    document.getElementById("private-chat-header").style.display = "none";
     document.getElementById("groupBtn").classList.toggle("active", mode === "group");
     document.getElementById("privateBtn").classList.toggle("active", mode === "private");
     document.getElementById("savedBtn").classList.toggle("active", mode === "saved");
@@ -82,15 +86,42 @@ function startPrivateChat(targetUser) {
     chatMode = "private";
     unreadCounts[targetUser] = 0;
     loadAllUsers();
-    document.getElementById("chat-header-text").textContent = `🔒 Private Chat with ${targetUser}`;
+    updatePrivateChatHeader(targetUser);
     document.getElementById("privateBtn").classList.add("active");
     document.getElementById("groupBtn").classList.remove("active");
     document.getElementById("messages").innerHTML = "";
+    // Close popup if open
+    closeHeaderProfile();
     fetch(`/private-messages/${username}/${targetUser}`)
     .then(res => res.json())
     .then(messages => {
         messages.forEach(m => addMessage(m.sender, m.message, m.sender === username, m.timestamp, m.reply_to, m.image_data, m.image_type, m.id, "private", targetUser));
     });
+}
+
+function updatePrivateChatHeader(targetUser) {
+    const p = userProfiles[targetUser] || {};
+    const isOnline = onlineUsers.includes(targetUser);
+
+    // Show private header, hide plain text
+    document.getElementById("chat-header-text").style.display = "none";
+    document.getElementById("private-chat-header").style.display = "flex";
+
+    // Avatar
+    const avatarEl = document.getElementById("pch-avatar");
+    if (p.avatar) {
+        avatarEl.innerHTML = `<img src="${p.avatar}" alt="">`;
+    } else {
+        avatarEl.innerHTML = "";
+        avatarEl.textContent = targetUser.charAt(0).toUpperCase();
+    }
+
+    // Name
+    document.getElementById("pch-name").textContent = targetUser;
+
+    // Status
+    const statusLabels = { online:"🟢 Online", busy:"🔴 Busy", away:"🟡 Away", invisible:"⚫ Invisible" };
+    document.getElementById("pch-status").textContent = !isOnline ? "⚫ Offline" : (statusLabels[p.user_status] || "🟢 Online");
 }
 
 // ── Users list ────────────────────────────────────────────────────────────
@@ -810,3 +841,65 @@ function closeViewProfile(e) {
     if (e && e.target !== document.getElementById("view-profile-modal")) return;
     document.getElementById("view-profile-modal").classList.remove("open");
 }
+
+// ── Header Profile Popup ──────────────────────────────────────────────────
+
+let _headerProfileOpen = false;
+
+function toggleHeaderProfile() {
+    if (_headerProfileOpen) { closeHeaderProfile(); return; }
+    openHeaderProfile();
+}
+
+function openHeaderProfile() {
+    if (!privateChatWith) return;
+    const p = userProfiles[privateChatWith] || {};
+    const isOnline = onlineUsers.includes(privateChatWith);
+    const popup = document.getElementById("header-profile-popup");
+
+    // Avatar
+    const avatarEl = document.getElementById("hpp-avatar");
+    if (p.avatar) {
+        avatarEl.innerHTML = `<img src="${p.avatar}" alt="">`;
+    } else {
+        avatarEl.innerHTML = "";
+        avatarEl.textContent = privateChatWith.charAt(0).toUpperCase();
+    }
+
+    // Name & status & bio
+    document.getElementById("hpp-name").textContent = privateChatWith;
+    const statusLabels = { online:"🟢 Online", busy:"🔴 Busy", away:"🟡 Away", invisible:"⚫ Invisible" };
+    document.getElementById("hpp-status").textContent = !isOnline ? "⚫ Offline" : (statusLabels[p.user_status] || "🟢 Online");
+    document.getElementById("hpp-bio").textContent = (p.bio && p.bio.trim()) ? p.bio : "No bio yet.";
+
+    popup.style.display = "flex";
+    _headerProfileOpen = true;
+
+    // Close on outside click
+    setTimeout(() => {
+        document.addEventListener("click", _closeHeaderOnOutside, { once: true });
+    }, 0);
+}
+
+function _closeHeaderOnOutside(e) {
+    const popup = document.getElementById("header-profile-popup");
+    const header = document.getElementById("private-chat-header");
+    if (popup && !popup.contains(e.target) && header && !header.contains(e.target)) {
+        closeHeaderProfile();
+    }
+}
+
+function closeHeaderProfile() {
+    const popup = document.getElementById("header-profile-popup");
+    if (popup) popup.style.display = "none";
+    _headerProfileOpen = false;
+}
+
+// Update header status dot when online users change
+const _origLoadAllUsers = loadAllUsers;
+socket.on("users", (usersArr) => {
+    onlineUsers = usersArr;
+    loadAllUsers();
+    // Also refresh private chat header if open
+    if (privateChatWith) updatePrivateChatHeader(privateChatWith);
+});
