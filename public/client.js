@@ -121,8 +121,29 @@ function loadAllUsers() {
         const usersDiv = document.getElementById("users");
         usersDiv.innerHTML = "";
 
+        // ── Self card ──
+        const me = users.find(u => u.username === username) || {};
+        const selfAvatarHtml = me.avatar
+            ? `<img class="user-avatar-thumb" src="${me.avatar}" alt="">`
+            : `<span class="user-avatar-thumb user-avatar-letter">${username.charAt(0).toUpperCase()}</span>`;
+        const selfDiv = document.createElement("div");
+        selfDiv.className = "user-item current-user";
+        selfDiv.innerHTML = `
+            <div class="user-avatar-wrap">
+                ${selfAvatarHtml}
+                <span class="status-dot status-online"></span>
+            </div>
+            <div class="user-item-info">
+                <span class="username-text">${username} (You)</span>
+                ${me.bio ? `<span class="user-bio-preview">${me.bio.slice(0,28)}${me.bio.length>28?"…":""}</span>` : ""}
+            </div>
+        `;
+        usersDiv.appendChild(selfDiv);
+
+        // ── Other users ──
         users.forEach(u => {
-            if(u.username === username) return;
+            if (u.username === username) return;
+            // A user is online if they are in the onlineUsers array
             const isOnline = onlineUsers.includes(u.username);
             const unread = unreadCounts[u.username] || 0;
             const avatarHtml = u.avatar
@@ -132,7 +153,7 @@ function loadAllUsers() {
 
             const div = document.createElement("div");
             div.className = "user-item";
-            if(u.username === privateChatWith) div.classList.add("selected");
+            if (u.username === privateChatWith) div.classList.add("selected");
 
             div.innerHTML = `
                 <div class="user-avatar-wrap">
@@ -146,7 +167,6 @@ function loadAllUsers() {
                 ${unread > 0 ? `<span class="badge">${unread}</span>` : ""}
             `;
 
-            // Left click = chat, long press / right click = view profile
             div.onclick = () => {
                 startPrivateChat(u.username);
                 if (window.matchMedia("(max-width:700px)").matches) closeSidebar();
