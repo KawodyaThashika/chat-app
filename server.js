@@ -83,20 +83,11 @@ db.query("ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar MEDIUMTEXT DEFAULT N
 db.query("ALTER TABLE users ADD COLUMN IF NOT EXISTS bio VARCHAR(200) DEFAULT NULL", () => {});
 db.query("ALTER TABLE users ADD COLUMN IF NOT EXISTS status VARCHAR(20) DEFAULT 'online'", () => {});
 
-// ── GET my profile ──
+// ── GET my profile (must be before /profile/:username) ──
 app.get("/profile/me", (req, res) => {
     if (!req.session.username) return res.status(401).json({ error: "Not logged in" });
     db.query("SELECT username, avatar, bio, status FROM users WHERE username=?",
         [req.session.username], (err, rows) => {
-            if (err || rows.length === 0) return res.json({});
-            res.json(rows[0]);
-        });
-});
-
-// ── GET any user profile ──
-app.get("/profile/:username", (req, res) => {
-    db.query("SELECT username, avatar, bio, status FROM users WHERE username=?",
-        [req.params.username], (err, rows) => {
             if (err || rows.length === 0) return res.json({});
             res.json(rows[0]);
         });
@@ -108,6 +99,15 @@ app.get("/all-users-with-profiles", (req, res) => {
         if (err) return res.json([]);
         res.json(result);
     });
+});
+
+// ── GET any user profile ──
+app.get("/profile/:username", (req, res) => {
+    db.query("SELECT username, avatar, bio, status FROM users WHERE username=?",
+        [req.params.username], (err, rows) => {
+            if (err || rows.length === 0) return res.json({});
+            res.json(rows[0]);
+        });
 });
 
 // ── SAVE profile ──
