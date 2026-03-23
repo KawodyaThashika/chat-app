@@ -11,11 +11,6 @@ let replyingTo = null; // { user, text }
 // Emoji reactions: msgId -> { emoji -> [usernames] }
 let reactions = {};
 
-// My profile cache
-let myProfile = { avatar: null, bio: "", status: "online" };
-// All users profiles cache: { username -> { avatar, bio, status } }
-let userProfiles = {};
-
 fetch("/username")
 .then(res => res.json())
 .then(data => {
@@ -24,7 +19,6 @@ fetch("/username")
     } else {
         username = data.username;
         socket.emit("join", username);
-        loadMyProfile();
         loadAllUsers();
     }
 });
@@ -112,80 +106,43 @@ socket.on("users", (usersArr) => {
 });
 
 function loadAllUsers() {
-    fetch("/all-users-with-profiles")
+    fetch("/all-users")
     .then(res => res.json())
     .then(users => {
-        // Cache profiles
-        users.forEach(u => { userProfiles[u.username] = u; });
-
         const usersDiv = document.getElementById("users");
         usersDiv.innerHTML = "";
 
-        // ── Self card ──
-        const me = users.find(u => u.username === username) || {};
-        const selfAvatarHtml = me.avatar
-            ? `<img class="user-avatar-thumb" src="${me.avatar}" alt="">`
-            : `<span class="user-avatar-thumb user-avatar-letter">${username.charAt(0).toUpperCase()}</span>`;
         const selfDiv = document.createElement("div");
         selfDiv.className = "user-item current-user";
         selfDiv.innerHTML = `
-            <div class="user-avatar-wrap">
-                ${selfAvatarHtml}
-                <span class="status-dot status-online"></span>
-            </div>
-            <div class="user-item-info">
-                <span class="username-text">${username} (You)</span>
-                ${me.bio ? `<span class="user-bio-preview">${me.bio.slice(0,28)}${me.bio.length>28?"…":""}</span>` : ""}
-            </div>
+            <span class="dot online"></span>
+            <span>${username} (You)</span>
         `;
         usersDiv.appendChild(selfDiv);
 
-        // ── Other users ──
         users.forEach(u => {
-            if (u.username === username) return;
-            // A user is online if they are in the onlineUsers array
+            if(u.username === username) return;
             const isOnline = onlineUsers.includes(u.username);
             const unread = unreadCounts[u.username] || 0;
-            const avatarHtml = u.avatar
-                ? `<img class="user-avatar-thumb" src="${u.avatar}" alt="">`
-                : `<span class="user-avatar-thumb user-avatar-letter">${u.username.charAt(0).toUpperCase()}</span>`;
-            const statusDot = getStatusDotHtml(isOnline, u.status);
 
             const div = document.createElement("div");
             div.className = "user-item";
-            if (u.username === privateChatWith) div.classList.add("selected");
+
+            if(u.username === privateChatWith) {
+                div.classList.add("selected");
+            }
 
             div.innerHTML = `
-                <div class="user-avatar-wrap">
-                    ${avatarHtml}
-                    ${statusDot}
-                </div>
-                <div class="user-item-info">
-                    <span class="username-text">${u.username}</span>
-                    ${u.bio ? `<span class="user-bio-preview">${u.bio.slice(0,28)}${u.bio.length>28?"…":""}</span>` : ""}
-                </div>
-                ${unread > 0 ? `<span class="badge">${unread}</span>` : ""}
+                <span class="dot ${isOnline ? 'online' : 'offline'}"></span>
+                <span class="username-text">${u.username}</span>
+                ${unread > 0 ? `<span class="badge">${unread}</span>` : ''}
             `;
 
-            div.onclick = () => {
-                startPrivateChat(u.username);
-                if (window.matchMedia("(max-width:700px)").matches) closeSidebar();
-            };
-            div.addEventListener("contextmenu", (e) => {
-                e.preventDefault();
-                openViewProfile(u.username);
-            });
+            div.onclick = () => { startPrivateChat(u.username); if (window.matchMedia('(max-width:700px)').matches) closeSidebar(); };
             div.style.cursor = "pointer";
             usersDiv.appendChild(div);
         });
     });
-}
-
-function getStatusDotHtml(isOnline, status) {
-    if (!isOnline) return `<span class="status-dot status-offline"></span>`;
-    const map = { online: "status-online", busy: "status-busy", away: "status-away", invisible: "status-offline" };
-    const cls = map[status] || "status-online";
-    return `<span class="status-dot ${cls}"></span>`;
 }
 
 socket.on("message", (data) => {
@@ -839,151 +796,3 @@ socket.on("messageEdited", ({ id, newText }) => {
     bubble.style.background = "rgba(99,102,241,0.15)";
     setTimeout(() => { bubble.style.background = ""; }, 800);
 });
-
-// ── USER PROFILE ──────────────────────────────────────────────────────────
-
-let _selectedStatus = "online";
-let _pendingAvatar = null;
-
-function loadMyProfile() {
-    fetch("/profile/me")
-    .then(res => res.json())
-    .then(p => {
-        myProfile = p;
-        _selectedStatus = p.status || "online";
-        updateSidebarProfileCard(p);
-    });
-}
-
-function updateSidebarProfileCard(p) {
-    const avatarEl = document.getElementById("sidebar-avatar");
-    const nameEl   = document.getElementById("sidebar-name");
-    const statusEl = document.getElementById("sidebar-status");
-    if (!avatarEl) return;
-
-    if (p.avatar) {
-        avatarEl.innerHTML = `<img src="${p.avatar}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`;
-    } else {
-        avatarEl.textContent = (p.username || username || "?").charAt(0).toUpperCase();
-    }
-    if (nameEl) nameEl.textContent = p.username || username;
-    if (statusEl) {
-        const labels = { online:"🟢 Online", busy:"🔴 Busy", away:"🟡 Away", invisible:"⚫ Invisible" };
-        statusEl.textContent = p.bio ? p.bio.slice(0,30) + (p.bio.length > 30 ? "…" : "") : (labels[p.status] || "🟢 Online");
-    }
-}
-
-function openProfileModal() {
-    const modal = document.getElementById("profile-modal");
-    if (!modal) return;
-
-    // Populate fields
-    document.getElementById("profile-username-display").value = username;
-    document.getElementById("profile-bio").value = myProfile.bio || "";
-    _selectedStatus = myProfile.status || "online";
-    _pendingAvatar = null;
-
-    // Avatar preview
-    const avatarEl = document.getElementById("modal-avatar");
-    if (myProfile.avatar) {
-        avatarEl.innerHTML = `<img src="${myProfile.avatar}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`;
-    } else {
-        avatarEl.textContent = username.charAt(0).toUpperCase();
-        avatarEl.style.backgroundImage = "";
-    }
-
-    // Status buttons
-    document.querySelectorAll(".status-opt").forEach(btn => {
-        btn.classList.toggle("active", btn.dataset.status === _selectedStatus);
-        btn.onclick = () => {
-            _selectedStatus = btn.dataset.status;
-            document.querySelectorAll(".status-opt").forEach(b => b.classList.remove("active"));
-            btn.classList.add("active");
-        };
-    });
-
-    // Avatar file input
-    const fileInput = document.getElementById("avatar-file-input");
-    fileInput.onchange = (e) => {
-        const file = e.target.files[0];
-        if (!file) return;
-        if (file.size > 3 * 1024 * 1024) { showToast("❌ Image too large (max 3MB)"); return; }
-        const reader = new FileReader();
-        reader.onload = (ev) => {
-            _pendingAvatar = ev.target.result;
-            const el = document.getElementById("modal-avatar");
-            el.innerHTML = `<img src="${_pendingAvatar}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`;
-        };
-        reader.readAsDataURL(file);
-        fileInput.value = "";
-    };
-
-    modal.classList.add("open");
-}
-
-function closeProfileModal(e) {
-    if (e && e.target !== document.getElementById("profile-modal")) return;
-    document.getElementById("profile-modal").classList.remove("open");
-}
-
-function saveProfile() {
-    const bio = document.getElementById("profile-bio").value.trim();
-    const avatar = _pendingAvatar || myProfile.avatar || null;
-
-    fetch("/profile/save", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ bio, status: _selectedStatus, avatar })
-    })
-    .then(res => res.json())
-    .then(data => {
-        if (data.ok) {
-            myProfile = { ...myProfile, bio, status: _selectedStatus, avatar };
-            updateSidebarProfileCard(myProfile);
-            showToast("✅ Profile saved!");
-            document.getElementById("profile-modal").classList.remove("open");
-            // Refresh user list to show updated profile
-            loadAllUsers();
-        } else {
-            showToast("❌ " + (data.error || "Failed to save"));
-        }
-    })
-    .catch(() => showToast("❌ Save failed"));
-}
-
-// View another user's profile
-function openViewProfile(targetUsername) {
-    const modal = document.getElementById("view-profile-modal");
-    if (!modal) return;
-
-    const p = userProfiles[targetUsername] || {};
-    const isOnline = onlineUsers.includes(targetUsername);
-
-    const avatarEl = document.getElementById("view-avatar");
-    if (p.avatar) {
-        avatarEl.innerHTML = `<img src="${p.avatar}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`;
-    } else {
-        avatarEl.textContent = targetUsername.charAt(0).toUpperCase();
-    }
-
-    document.getElementById("view-name").textContent = targetUsername;
-
-    const statusLabels = { online:"🟢 Online", busy:"🔴 Busy", away:"🟡 Away", invisible:"⚫ Invisible" };
-    const statusText = !isOnline ? "⚫ Offline" : (statusLabels[p.status] || "🟢 Online");
-    document.getElementById("view-status-badge").textContent = statusText;
-    document.getElementById("view-bio").textContent = p.bio || "No bio yet.";
-
-    const chatBtn = document.getElementById("view-chat-btn");
-    chatBtn.onclick = () => {
-        closeViewProfile();
-        startPrivateChat(targetUsername);
-        if (window.matchMedia("(max-width:700px)").matches) closeSidebar();
-    };
-
-    modal.classList.add("open");
-}
-
-function closeViewProfile(e) {
-    if (e && e.target !== document.getElementById("view-profile-modal")) return;
-    document.getElementById("view-profile-modal").classList.remove("open");
-}
