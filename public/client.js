@@ -22,6 +22,11 @@ fetch("/username")
     } else {
         username = data.username;
         socket.emit("join", username);
+        // Show username immediately in sidebar card before profile loads
+        const nameEl = document.getElementById("sidebar-name");
+        const avatarEl = document.getElementById("sidebar-avatar");
+        if (nameEl) nameEl.textContent = username;
+        if (avatarEl) avatarEl.textContent = username.charAt(0).toUpperCase();
         loadMyProfile();
         loadAllUsers();
     }
@@ -650,6 +655,8 @@ function loadMyProfile() {
         myProfile = p;
         _selectedStatus = p.user_status || "online";
         updateSidebarProfileCard(p);
+        // Refresh user list so self card shows correct avatar/bio
+        loadAllUsers();
     })
     .catch(() => {});
 }
@@ -659,15 +666,20 @@ function updateSidebarProfileCard(p) {
     const nameEl   = document.getElementById("sidebar-name");
     const statusEl = document.getElementById("sidebar-status");
     if (!avatarEl) return;
+
+    const displayName = p.username || username || "?";
     if (p.avatar) {
-        avatarEl.innerHTML = `<img src="${p.avatar}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`;
+        avatarEl.innerHTML = `<img src="${p.avatar}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;display:block;">`;
     } else {
-        avatarEl.textContent = (p.username || username || "?").charAt(0).toUpperCase();
+        avatarEl.innerHTML = "";
+        avatarEl.textContent = displayName.charAt(0).toUpperCase();
     }
-    if (nameEl) nameEl.textContent = p.username || username;
+    if (nameEl) nameEl.textContent = displayName;
     if (statusEl) {
         const labels = { online:"🟢 Online", busy:"🔴 Busy", away:"🟡 Away", invisible:"⚫ Invisible" };
-        statusEl.textContent = p.bio ? p.bio.slice(0,30) + (p.bio.length>30?"…":"") : (labels[p.user_status] || "🟢 Online");
+        statusEl.textContent = (p.bio && p.bio.trim())
+            ? p.bio.slice(0,30) + (p.bio.length>30?"…":"")
+            : (labels[p.user_status] || "🟢 Online");
     }
 }
 

@@ -143,10 +143,7 @@ body{
     letter-spacing: 1px;
 }
 
-.sidebar div{
-    padding:8px;
-    border-bottom:1px solid rgba(253,164,129,0.1);
-}
+/* sidebar div rule removed — handled by .user-item */
 
 .chat-area{
     flex:1;
@@ -301,11 +298,7 @@ to{ opacity:1; transform:translateY(0); }
 
 .message .msg-time { align-self: flex-start; }
 
-.sidebar div{
-    padding:8px;
-    border-bottom:1px solid rgba(253,164,129,0.1);
-    color:white;
-}
+/* sidebar div rule removed — handled by .user-item */
 
 .sidebar .current-user {
     font-weight: bold;
@@ -316,12 +309,22 @@ to{ opacity:1; transform:translateY(0); }
     display: flex;
     align-items: center;
     gap: 8px;
-    padding: 8px;
-    border-bottom: 1px solid rgba(253,164,129,0.1);
+    padding: 8px !important;
+    border-bottom: 1px solid rgba(253,164,129,0.1) !important;
     color: white;
     position: relative;
     border-radius: 8px;
     transition: background 0.2s;
+}
+
+/* Prevent sidebar div rule from affecting inner elements */
+.user-item div,
+.my-profile-card div,
+.user-avatar-wrap,
+.user-item-info,
+.my-profile-info {
+    padding: 0 !important;
+    border-bottom: none !important;
 }
 
 .user-item:hover { background: rgba(253,164,129,0.08); }
