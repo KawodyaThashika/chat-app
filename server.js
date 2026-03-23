@@ -95,17 +95,6 @@ let users = {};
 
 io.on("connection", (socket) => {
 
-    socket.on("join", (username) => {
-        socket.username = username;
-        users[username] = socket.id;
-        io.emit("users", Object.keys(users));
-
-        // Load group messages
-        db.query("SELECT * FROM messages ORDER BY timestamp ASC LIMIT 50", (err, results) => {
-            if (err) console.log(err);
-            else socket.emit("previousMessages", results);
-        });
-    });
 
     // group message
     socket.on("message", ({ text, replyTo, imageData, imageType }) => {
@@ -266,6 +255,7 @@ io.on("connection", (socket) => {
             io.emit("users", Object.keys(users));
         }
     });
+
 });
 
 const PORT = process.env.PORT || 3000; // ✅ use env PORT too
