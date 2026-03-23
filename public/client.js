@@ -99,6 +99,7 @@ function startPrivateChat(targetUser) {
     .then(res => res.json())
     .then(messages => {
         messages.forEach(m => {
+            // CHANGED: pass m.id, chatType and peer for delete targeting
             addMessage(m.sender, m.message, m.sender === username, m.timestamp, m.reply_to, m.image_data, m.image_type, m.id, "private", targetUser);
         });
     });
@@ -153,27 +154,17 @@ socket.on("message", (data) => {
     if (chatMode === "group") {
         // CHANGED: pass data.id, chatType for delete button
         addMessage(data.user, data.text, data.user === username, null, data.replyTo, data.imageData, data.imageType, data.id, "group", null);
-    } else if (data.user !== username) {
-        // User is not in group chat — show notification toast
-        const preview = data.imageData ? "📷 Image" : (data.text || "");
-        showMsgNotification(data.user, preview, "group");
     }
 });
 
 socket.on("privateMessage", ({ id, from, message, replyTo, imageData, imageType }) => {
-    if (from === username) {
-        // Server echo to sender — assign real id
-        updateLastOptimisticMessage(id);
-        return;
-    }
+    if (from === username) return;
     if (chatMode === "private" && from === privateChatWith) {
+        // CHANGED: pass id, chatType and sender for delete button
         addMessage(from, message, false, null, replyTo, imageData, imageType, id, "private", from);
     } else {
         unreadCounts[from] = (unreadCounts[from] || 0) + 1;
         loadAllUsers();
-        // 🔔 Show message notification toast
-        const preview = imageData ? "📷 Image" : (message || "");
-        showMsgNotification(from, preview, "private");
     }
 });
 
@@ -225,9 +216,6 @@ function sendMsg(){
         });
         // CHANGED: id is null until server echoes back; delete-for-me still works locally via wrapper removal
         addMessage(username, msg, true, null, replyingTo, pendingImage ? pendingImage.data : null, pendingImage ? pendingImage.type : null, null, "private", privateChatWith);
-        // Track this optimistic wrapper so we can patch it with real id later
-        const _msgs = document.getElementById("messages");
-        _lastOptimisticWrapper = _msgs ? _msgs.querySelector(".message-wrapper:last-child") : null;
     } else {
         alert("Please select a user to chat with!");
         return;
@@ -271,7 +259,6 @@ function addMessage(user, message, isCurrentUser, timestamp = null, replyTo = nu
     if (chatPeer) wrapper.dataset.chatPeer = chatPeer;
     // Store timestamp for 30-min edit window
     wrapper.dataset.timestamp = timestamp ? new Date(timestamp).getTime() : Date.now();
-
 
     // CHANGED: replaced 3 separate floating buttons with a single ⋮ menu button
     // inside the bubble's top-right corner (WhatsApp/Telegram style)

@@ -95,6 +95,17 @@ let users = {};
 
 io.on("connection", (socket) => {
 
+    socket.on("join", (username) => {
+        socket.username = username;
+        users[username] = socket.id;
+        io.emit("users", Object.keys(users));
+
+        // Load group messages
+        db.query("SELECT * FROM messages ORDER BY timestamp ASC LIMIT 50", (err, results) => {
+            if (err) console.log(err);
+            else socket.emit("previousMessages", results);
+        });
+    });
 
     // group message
     socket.on("message", ({ text, replyTo, imageData, imageType }) => {
@@ -204,58 +215,12 @@ io.on("connection", (socket) => {
         }
     });
 
-
-    // ── EDIT MESSAGE ──────────────────────────────────────────────────────────
-    const EDIT_LIMIT_MS = 30 * 60 * 1000; // 30 minutes
-
-    socket.on("editMessage", ({ id, newText, chatType, to }) => {
-        const user = socket.username;
-        if (!user || !id || !newText) return;
-
-        if (chatType === "private") {
-            // Check timestamp and sender for private messages
-            db.query("SELECT sender, timestamp FROM private_messages WHERE id=?", [id], (err, rows) => {
-                if (err || rows.length === 0) return;
-                const row = rows[0];
-                if (row.sender !== user) return;
-                const age = Date.now() - new Date(row.timestamp).getTime();
-                if (age > EDIT_LIMIT_MS) {
-                    socket.emit("editError", { message: "Cannot edit — 30 minute limit exceeded" });
-                    return;
-                }
-                db.query("UPDATE private_messages SET message=? WHERE id=?", [newText, id], (err2) => {
-                    if (err2) return;
-                    socket.emit("messageEdited", { id, newText });
-                    const toSocketId = users[to];
-                    if (toSocketId) io.to(toSocketId).emit("messageEdited", { id, newText });
-                });
-            });
-        } else {
-            // Group message
-            db.query("SELECT user, timestamp FROM messages WHERE id=?", [id], (err, rows) => {
-                if (err || rows.length === 0) return;
-                const row = rows[0];
-                if (row.user !== user) return;
-                const age = Date.now() - new Date(row.timestamp).getTime();
-                if (age > EDIT_LIMIT_MS) {
-                    socket.emit("editError", { message: "Cannot edit — 30 minute limit exceeded" });
-                    return;
-                }
-                db.query("UPDATE messages SET message=? WHERE id=?", [newText, id], (err2) => {
-                    if (err2) return;
-                    io.emit("messageEdited", { id, newText });
-                });
-            });
-        }
-    });
-
     socket.on("disconnect", () => {
         if (socket.username) {
             delete users[socket.username];
             io.emit("users", Object.keys(users));
         }
     });
-
 });
 
 const PORT = process.env.PORT || 3000; // ✅ use env PORT too
