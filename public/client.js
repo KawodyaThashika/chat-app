@@ -8,9 +8,6 @@ let unreadCounts = {};
 let lastShownDate = null;
 let replyingTo = null; // { user, text }
 
-// Emoji reactions: msgId -> { emoji -> [usernames] }
-let reactions = {};
-
 fetch("/username")
 .then(res => res.json())
 .then(data => {
@@ -295,17 +292,6 @@ function addMessage(user, message, isCurrentUser, timestamp = null, replyTo = nu
     });
 
     wrapper.appendChild(div);
-
-    // Reactions bar (shows existing reactions for this message)
-    if (msgId) {
-        const reactBar = document.createElement("div");
-        reactBar.className = "reactions-bar";
-        reactBar.dataset.msgId = msgId;
-        wrapper.appendChild(reactBar);
-        // Render any already-known reactions
-        renderReactions(msgId, reactBar);
-    }
-
     messagesDiv.appendChild(wrapper);
     messagesDiv.scrollTop = messagesDiv.scrollHeight;
 }
@@ -506,15 +492,6 @@ function showMsgMenu(btn, wrapper, isCurrentUser, msgId, chatType, chatPeer, use
     menu.id = "msg-menu";
     menu.className = "delete-menu";
 
-    // ── React ──
-    const reactItem = document.createElement("button");
-    reactItem.innerHTML = "😊&nbsp; React";
-    reactItem.onclick = (e) => {
-        menu.remove();
-        showEmojiPicker(btn, msgId, chatType, chatPeer);
-    };
-    menu.appendChild(reactItem);
-
     // ── Reply ──
     const replyItem = document.createElement("button");
     replyItem.innerHTML = "↩&nbsp; Reply";
@@ -618,86 +595,4 @@ document.addEventListener("DOMContentLoaded", () => {
             if (_mobileMediaQuery.matches) closeSidebar();
         });
     });
-});
-// ── EMOJI REACTIONS ──────────────────────────────────────────────────────
-
-const REACTION_EMOJIS = ["❤️", "😂", "😮", "😢", "😡", "👍", "🎉", "🔥"];
-
-function showEmojiPicker(anchorEl, msgId, chatType, chatPeer) {
-    // Remove any existing picker
-    const existing = document.getElementById("emoji-picker");
-    if (existing) existing.remove();
-
-    if (!msgId) return; // can't react to a message without an id
-
-    const picker = document.createElement("div");
-    picker.id = "emoji-picker";
-    picker.className = "emoji-picker";
-
-    REACTION_EMOJIS.forEach(emoji => {
-        const btn = document.createElement("button");
-        btn.className = "emoji-pick-btn";
-        btn.textContent = emoji;
-        btn.title = emoji;
-        btn.onclick = (e) => {
-            e.stopPropagation();
-            sendReaction(msgId, emoji, chatType, chatPeer);
-            picker.remove();
-        };
-        picker.appendChild(btn);
-    });
-
-    document.body.appendChild(picker);
-
-    // Position near the anchor
-    const rect = anchorEl.getBoundingClientRect();
-    let top = rect.bottom + window.scrollY + 6;
-    let left = rect.left + window.scrollX;
-    // Keep on screen
-    const pickerW = 280;
-    if (left + pickerW > window.innerWidth - 8) left = window.innerWidth - pickerW - 8;
-    if (left < 4) left = 4;
-    picker.style.top = top + "px";
-    picker.style.left = left + "px";
-
-    setTimeout(() => {
-        document.addEventListener("click", () => picker.remove(), { once: true });
-    }, 0);
-}
-
-function sendReaction(msgId, emoji, chatType, chatPeer) {
-    socket.emit("react", { msgId, emoji, chatType, to: chatPeer });
-}
-
-function renderReactions(msgId, barEl) {
-    barEl.innerHTML = "";
-    const msgReactions = reactions[msgId];
-    if (!msgReactions) return;
-
-    Object.entries(msgReactions).forEach(([emoji, users]) => {
-        if (!users || users.length === 0) return;
-        const chip = document.createElement("button");
-        chip.className = "reaction-chip" + (users.includes(username) ? " mine" : "");
-        chip.title = users.join(", ");
-        chip.innerHTML = `${emoji}<span class="reaction-count">${users.length}</span>`;
-        chip.onclick = () => {
-            // Get the wrapper to retrieve chatType/chatPeer
-            const wrapper = barEl.closest(".message-wrapper");
-            const chatType = wrapper ? wrapper.dataset.chatType : "group";
-            const chatPeer = wrapper ? wrapper.dataset.chatPeer : null;
-            sendReaction(msgId, emoji, chatType, chatPeer);
-        };
-        barEl.appendChild(chip);
-    });
-}
-
-function updateReactionBar(msgId) {
-    const bar = document.querySelector(`.reactions-bar[data-msg-id="${msgId}"]`);
-    if (bar) renderReactions(msgId, bar);
-}
-
-// Server broadcasts reaction updates
-socket.on("reactionUpdate", ({ msgId, reactionMap }) => {
-    reactions[msgId] = reactionMap;
-    updateReactionBar(msgId);
 });
