@@ -33,18 +33,28 @@ app.use(session({
     }
 }));
 
-// ── Auto-add profile columns ──
-db.query("ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar LONGTEXT DEFAULT NULL", (err) => {
-    if (err && err.code !== "ER_DUP_FIELDNAME") console.log("avatar column:", err.message);
+// ── Auto-add profile columns (Railway-compatible) ──
+// Uses SHOW COLUMNS instead of IF NOT EXISTS (works on all MySQL versions)
+function addColumnIfMissing(col, definition, cb) {
+    db.query(`SHOW COLUMNS FROM users LIKE ?`, [col], (err, rows) => {
+        if (err) { console.log("SHOW COLUMNS error:", err.message); if (cb) cb(); return; }
+        if (rows && rows.length > 0) { if (cb) cb(); return; } // already exists
+        db.query(`ALTER TABLE users ADD COLUMN ${col} ${definition}`, (err2) => {
+            if (err2) console.log(`Add column ${col} failed:`, err2.message);
+            else console.log(`✅ Added column: ${col}`);
+            if (cb) cb();
+        });
+    });
+}
+
+// Run sequentially: bio → user_status → avatar
+addColumnIfMissing("bio", "VARCHAR(200) NOT NULL DEFAULT ''", () => {
+    addColumnIfMissing("user_status", "VARCHAR(20) NOT NULL DEFAULT 'online'", () => {
+        addColumnIfMissing("avatar", "LONGTEXT DEFAULT NULL", () => {
+            console.log("✅ Profile columns ready");
+        });
+    });
 });
-db.query("ALTER TABLE users ADD COLUMN IF NOT EXISTS bio VARCHAR(200) DEFAULT ''", (err) => {
-    if (err && err.code !== "ER_DUP_FIELDNAME") console.log("bio column:", err.message);
-});
-db.query("ALTER TABLE users ADD COLUMN IF NOT EXISTS user_status VARCHAR(20) DEFAULT 'online'", (err) => {
-    if (err && err.code !== "ER_DUP_FIELDNAME") console.log("user_status column:", err.message);
-});
-// Increase packet size for large avatar base64 data
-// Note: max_allowed_packet managed by Railway MySQL
 
 // REGISTER
 app.post("/register", (req, res) => {
@@ -140,30 +150,24 @@ app.post("/profile/save", (req, res) => {
     if (safeAvatar && safeAvatar.length > 700000) safeAvatar = null;
     const user = req.session.username;
 
-    // Ensure columns exist first, then update
-    const addCols = [
-        `ALTER TABLE users ADD COLUMN IF NOT EXISTS bio VARCHAR(200) DEFAULT ''`,
-        `ALTER TABLE users ADD COLUMN IF NOT EXISTS user_status VARCHAR(20) DEFAULT 'online'`,
-        `ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar LONGTEXT DEFAULT NULL`
-    ];
-
-    let done = 0;
-    const afterCols = () => {
-        done++;
-        if (done < addCols.length) return;
-        // All columns ensured — now save
-        db.query("UPDATE users SET bio=?, user_status=?, avatar=? WHERE username=?",
-            [safeBio, safeStatus, safeAvatar, user],
-            (err) => {
-                if (err) {
-                    console.error("Profile save error:", err.message);
-                    return res.status(500).json({ error: err.message });
-                }
-                res.json({ ok: true, avatarSaved: !!safeAvatar });
+    // Ensure all 3 columns exist (safe for all MySQL versions), then save
+    addColumnIfMissing("bio", "VARCHAR(200) NOT NULL DEFAULT ''", () => {
+        addColumnIfMissing("user_status", "VARCHAR(20) NOT NULL DEFAULT 'online'", () => {
+            addColumnIfMissing("avatar", "LONGTEXT DEFAULT NULL", () => {
+                db.query(
+                    "UPDATE users SET bio=?, user_status=?, avatar=? WHERE username=?",
+                    [safeBio, safeStatus, safeAvatar, user],
+                    (err) => {
+                        if (err) {
+                            console.error("Profile save error:", err.message);
+                            return res.status(500).json({ error: err.message });
+                        }
+                        res.json({ ok: true, avatarSaved: !!safeAvatar });
+                    }
+                );
             });
-    };
-
-    addCols.forEach(sql => db.query(sql, () => afterCols()));
+        });
+    });
 });
 
 // PRIVATE MESSAGES
