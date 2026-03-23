@@ -33,6 +33,8 @@
             <span class="my-profile-edit-icon">✏️</span>
         </div>
 
+        <h3>Users</h3>
+
         <div class="chat-mode-btns">
             <button id="groupBtn" class="mode-btn active" onclick="switchMode('group')">
                 👥 Group Chat
@@ -45,16 +47,33 @@
             </button>
         </div>
 
-        <h3>Users</h3>
         <div id="users"></div>
     </div>
 
     <div class="chat-area">
 
-        <!-- CHANGED: header now has a hamburger button on the left for mobile -->
         <div class="chat-header" id="chat-header">
             <button class="hamburger-btn" onclick="openSidebar()" title="Menu">☰</button>
+
+            <!-- Default: group/saved mode -->
             <span id="chat-header-text">👥 Group Chat</span>
+
+            <!-- Private chat header (hidden by default) -->
+            <div id="private-chat-header" class="private-chat-header" style="display:none;">
+                <div class="pch-avatar" id="pch-avatar" onclick="toggleHeaderProfile()"></div>
+                <div class="pch-info" onclick="toggleHeaderProfile()">
+                    <div class="pch-name" id="pch-name"></div>
+                    <div class="pch-status" id="pch-status"></div>
+                </div>
+            </div>
+
+            <!-- Mini profile popup (shown on click) -->
+            <div id="header-profile-popup" class="header-profile-popup" style="display:none;">
+                <div class="hpp-avatar" id="hpp-avatar"></div>
+                <div class="hpp-name" id="hpp-name"></div>
+                <div class="hpp-status" id="hpp-status"></div>
+                <div class="hpp-bio" id="hpp-bio"></div>
+            </div>
         </div>
 
         <div id="messages" class="messages"></div>
