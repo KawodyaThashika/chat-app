@@ -88,24 +88,40 @@ app.get("/all-users", (req, res) => {
 // ── GET my profile ──
 app.get("/profile/me", (req, res) => {
     if (!req.session.username) return res.status(401).json({ error: "Not logged in" });
-    db.query("SELECT username, avatar, bio, user_status FROM users WHERE username=?",
+    // Use COALESCE so query works even if columns don't exist yet
+    db.query("SELECT username, COALESCE(avatar, NULL) as avatar, COALESCE(bio, '') as bio, COALESCE(user_status, 'online') as user_status FROM users WHERE username=?",
         [req.session.username], (err, rows) => {
-            if (err || !rows || rows.length === 0) return res.json({});
+            if (err) {
+                // Columns might not exist yet — return basic profile
+                db.query("SELECT username FROM users WHERE username=?", [req.session.username], (err2, rows2) => {
+                    if (err2 || !rows2 || rows2.length === 0) return res.json({});
+                    res.json({ username: rows2[0].username, avatar: null, bio: "", user_status: "online" });
+                });
+                return;
+            }
+            if (!rows || rows.length === 0) return res.json({});
             res.json(rows[0]);
         });
 });
 
 // ── GET all users with profiles ──
 app.get("/all-users-with-profiles", (req, res) => {
-    db.query("SELECT username, avatar, bio, user_status FROM users", (err, result) => {
-        if (err) return res.json([]);
+    db.query("SELECT username, COALESCE(avatar, NULL) as avatar, COALESCE(bio, '') as bio, COALESCE(user_status, 'online') as user_status FROM users", (err, result) => {
+        if (err) {
+            // Fall back to just usernames if profile columns missing
+            db.query("SELECT username FROM users", (err2, rows) => {
+                if (err2) return res.json([]);
+                res.json(rows.map(r => ({ username: r.username, avatar: null, bio: "", user_status: "online" })));
+            });
+            return;
+        }
         res.json(result);
     });
 });
 
 // ── GET single user profile ──
 app.get("/profile/:username", (req, res) => {
-    db.query("SELECT username, avatar, bio, user_status FROM users WHERE username=?",
+    db.query("SELECT username, COALESCE(avatar, NULL) as avatar, COALESCE(bio, '') as bio, COALESCE(user_status, 'online') as user_status FROM users WHERE username=?",
         [req.params.username], (err, rows) => {
             if (err || !rows || rows.length === 0) return res.json({});
             res.json(rows[0]);
@@ -115,25 +131,39 @@ app.get("/profile/:username", (req, res) => {
 // ── SAVE profile ──
 app.post("/profile/save", (req, res) => {
     if (!req.session.username) {
-        console.log("Profile save: no session username", req.session);
-        return res.status(401).json({ error: "Not logged in — please refresh and try again" });
+        return res.status(401).json({ error: "Not logged in — please refresh the page" });
     }
     const { bio, status, avatar } = req.body;
     const safeStatus = ["online","busy","away","invisible"].includes(status) ? status : "online";
     const safeBio = (bio || "").slice(0, 200);
-    // Limit avatar to ~500KB base64 to avoid packet issues
     let safeAvatar = avatar || null;
     if (safeAvatar && safeAvatar.length > 700000) safeAvatar = null;
+    const user = req.session.username;
 
-    db.query("UPDATE users SET bio=?, user_status=?, avatar=? WHERE username=?",
-        [safeBio, safeStatus, safeAvatar, req.session.username],
-        (err) => {
-            if (err) {
-                console.error("Profile save DB error:", err.message, "code:", err.code);
-                return res.status(500).json({ error: "Save failed: " + err.message });
-            }
-            res.json({ ok: true, avatarSaved: !!safeAvatar });
-        });
+    // Ensure columns exist first, then update
+    const addCols = [
+        `ALTER TABLE users ADD COLUMN IF NOT EXISTS bio VARCHAR(200) DEFAULT ''`,
+        `ALTER TABLE users ADD COLUMN IF NOT EXISTS user_status VARCHAR(20) DEFAULT 'online'`,
+        `ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar LONGTEXT DEFAULT NULL`
+    ];
+
+    let done = 0;
+    const afterCols = () => {
+        done++;
+        if (done < addCols.length) return;
+        // All columns ensured — now save
+        db.query("UPDATE users SET bio=?, user_status=?, avatar=? WHERE username=?",
+            [safeBio, safeStatus, safeAvatar, user],
+            (err) => {
+                if (err) {
+                    console.error("Profile save error:", err.message);
+                    return res.status(500).json({ error: err.message });
+                }
+                res.json({ ok: true, avatarSaved: !!safeAvatar });
+            });
+    };
+
+    addCols.forEach(sql => db.query(sql, () => afterCols()));
 });
 
 // PRIVATE MESSAGES
