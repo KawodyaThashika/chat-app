@@ -868,52 +868,19 @@ function closeViewProfile(e) {
 
 let _headerProfileOpen = false;
 
-function toggleHeaderProfile() {
-    if (_headerProfileOpen) { closeHeaderProfile(); return; }
-    openHeaderProfile();
-}
-
-function openHeaderProfile() {
+function toggleHeaderProfile(e) {
     if (!privateChatWith) return;
-    const p = userProfiles[privateChatWith] || {};
-    const isOnline = onlineUsers.includes(privateChatWith);
-    const popup = document.getElementById("header-profile-popup");
-
-    // Avatar
-    const avatarEl = document.getElementById("hpp-avatar");
-    if (p.avatar) {
-        avatarEl.innerHTML = `<img src="${p.avatar}" alt="">`;
-    } else {
-        avatarEl.innerHTML = "";
-        avatarEl.textContent = privateChatWith.charAt(0).toUpperCase();
+    // Reuse the same bubble popup — just trigger it from header
+    if (_msgProfilePopup) {
+        _msgProfilePopup.remove();
+        _msgProfilePopup = null;
+        return;
     }
-
-    // Name & status & bio
-    document.getElementById("hpp-name").textContent = privateChatWith;
-    const statusLabels = { online:"🟢 Online", busy:"🔴 Busy", away:"🟡 Away", invisible:"⚫ Invisible" };
-    document.getElementById("hpp-status").textContent = !isOnline ? "⚫ Offline" : (statusLabels[p.user_status] || "🟢 Online");
-    document.getElementById("hpp-bio").textContent = (p.bio && p.bio.trim()) ? p.bio : "No bio yet.";
-
-    popup.style.display = "flex";
-    _headerProfileOpen = true;
-
-    // Close on outside click
-    setTimeout(() => {
-        document.addEventListener("click", _closeHeaderOnOutside, { once: true });
-    }, 0);
-}
-
-function _closeHeaderOnOutside(e) {
-    const popup = document.getElementById("header-profile-popup");
-    const header = document.getElementById("private-chat-header");
-    if (popup && !popup.contains(e.target) && header && !header.contains(e.target)) {
-        closeHeaderProfile();
-    }
+    showMsgUserProfile(e, privateChatWith);
 }
 
 function closeHeaderProfile() {
-    const popup = document.getElementById("header-profile-popup");
-    if (popup) popup.style.display = "none";
+    if (_msgProfilePopup) { _msgProfilePopup.remove(); _msgProfilePopup = null; }
     _headerProfileOpen = false;
 }
 
@@ -965,19 +932,25 @@ function showMsgUserProfile(e, targetUser) {
     document.body.appendChild(popup);
     _msgProfilePopup = popup;
 
-    // Position near the click point
-    const rect = e.target.getBoundingClientRect ? e.target.getBoundingClientRect() : { bottom: e.clientY, left: e.clientX, right: e.clientX };
-    let top = rect.bottom + window.scrollY + 6;
-    let left = rect.left + window.scrollX;
+    // Position near the clicked element
+    const clickedEl = e.currentTarget || e.target;
+    const rect = clickedEl.getBoundingClientRect ? clickedEl.getBoundingClientRect() : { top: e.clientY, bottom: e.clientY + 20, left: e.clientX, right: e.clientX };
 
-    // Keep on screen
     const popW = 220;
+    const popH = 200;
+
+    let top = rect.bottom + 8;
+    let left = rect.left;
+
+    // Keep horizontally on screen
     if (left + popW > window.innerWidth - 8) left = window.innerWidth - popW - 8;
     if (left < 8) left = 8;
-    // If near bottom, show above
-    if (top + 180 > window.innerHeight + window.scrollY) {
-        top = rect.top + window.scrollY - 180;
+
+    // If near bottom of screen, show above the element
+    if (top + popH > window.innerHeight - 8) {
+        top = rect.top - popH - 8;
     }
+    if (top < 8) top = 8;
 
     popup.style.top = top + "px";
     popup.style.left = left + "px";
