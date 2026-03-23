@@ -91,14 +91,75 @@ app.get("/private-messages/:user1/:user2", (req, res) => {
 });
 
 
+// Auto-add read_status column if not exists
+db.query("ALTER TABLE private_messages ADD COLUMN IF NOT EXISTS read_status VARCHAR(20) DEFAULT 'sent'", () => {});
+
 let users = {};
 
 io.on("connection", (socket) => {
 
+
+    // ── READ RECEIPTS ─────────────────────────────────────────────────────────
+
+    // Receiver tells server: message delivered (seen in chat list)
+    socket.on("markDelivered", ({ id, to }) => {
+        db.query("UPDATE private_messages SET read_status='delivered' WHERE id=?", [id]);
+        const senderSocketId = users[to];
+        if (senderSocketId) {
+            io.to(senderSocketId).emit("receiptDelivered", { id });
+        }
+    });
+
+    // Receiver tells server: message read (opened the chat)
+    socket.on("markRead", ({ id, to }) => {
+        db.query("UPDATE private_messages SET read_status='read' WHERE id=?", [id]);
+        const senderSocketId = users[to];
+        if (senderSocketId) {
+            io.to(senderSocketId).emit("receiptRead", { id });
+        }
+    });
+
+    // Receiver opens a chat — mark ALL messages from that user as read
+    socket.on("markAllRead", ({ from }) => {
+        const reader = socket.username;
+        if (!reader) return;
+        db.query(
+            "SELECT id FROM private_messages WHERE sender=? AND receiver=? AND read_status != 'read'",
+            [from, reader],
+            (err, rows) => {
+                if (err || rows.length === 0) return;
+                const ids = rows.map(r => r.id);
+                db.query("UPDATE private_messages SET read_status='read' WHERE sender=? AND receiver=?", [from, reader]);
+                // Tell the sender all their messages to this receiver are now read
+                const senderSocketId = users[from];
+                if (senderSocketId) {
+                    ids.forEach(id => io.to(senderSocketId).emit("receiptRead", { id }));
+                }
+            }
+        );
+    });
+
+    // When a user comes online, deliver any pending undelivered messages sent to them
     socket.on("join", (username) => {
         socket.username = username;
         users[username] = socket.id;
         io.emit("users", Object.keys(users));
+
+        // Mark pending messages as delivered
+        db.query(
+            "SELECT id, sender FROM private_messages WHERE receiver=? AND read_status='sent'",
+            [username],
+            (err, rows) => {
+                if (err) return;
+                rows.forEach(row => {
+                    db.query("UPDATE private_messages SET read_status='delivered' WHERE id=?", [row.id]);
+                    const senderSocketId = users[row.sender];
+                    if (senderSocketId) {
+                        io.to(senderSocketId).emit("receiptDelivered", { id: row.id });
+                    }
+                });
+            }
+        );
 
         // Load group messages
         db.query("SELECT * FROM messages ORDER BY timestamp ASC LIMIT 50", (err, results) => {
@@ -136,10 +197,19 @@ io.on("connection", (socket) => {
                 // CHANGED: include the new row's id so clients can reference it for deletion
                 const msgId = result.insertId;
                 const receiverSocketId = users[to];
+                let deliveryStatus = "sent";
                 if (receiverSocketId) {
-                    io.to(receiverSocketId).emit("privateMessage", { id: msgId, from, message, replyTo, imageData, imageType });
+                    // Receiver is online — mark delivered in DB
+                    deliveryStatus = "delivered";
+                    db.query("UPDATE private_messages SET read_status='delivered' WHERE id=?", [msgId]);
+                    io.to(receiverSocketId).emit("privateMessage", { id: msgId, from, message, replyTo, imageData, imageType, status: "delivered" });
                 }
-                socket.emit("privateMessage", { id: msgId, from, message, replyTo, imageData, imageType });
+                // Echo back to sender with real id and delivery status
+                socket.emit("privateMessage", { id: msgId, from, message, replyTo, imageData, imageType, status: deliveryStatus });
+                // If delivered, notify sender of delivery receipt
+                if (deliveryStatus === "delivered") {
+                    socket.emit("receiptDelivered", { id: msgId });
+                }
             });
     });
 
@@ -266,6 +336,7 @@ io.on("connection", (socket) => {
             io.emit("users", Object.keys(users));
         }
     });
+
 });
 
 const PORT = process.env.PORT || 3000; // ✅ use env PORT too
