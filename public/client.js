@@ -1,3 +1,22 @@
+// ── ADDED: Dark/Light theme toggle ──────────────────────────────────────────
+function toggleTheme() {
+    const html = document.documentElement;
+    const current = html.getAttribute("data-theme") || "dark";
+    const next = current === "dark" ? "light" : "dark";
+    html.setAttribute("data-theme", next);
+    localStorage.setItem("chatAppTheme", next);
+    updateThemeIcon();
+}
+
+function updateThemeIcon() {
+    const btn = document.getElementById("themeToggleBtn");
+    if (!btn) return;
+    const current = document.documentElement.getAttribute("data-theme") || "dark";
+    btn.textContent = current === "dark" ? "☀️" : "🌙";
+}
+
+document.addEventListener("DOMContentLoaded", updateThemeIcon);
+
 const socket = io();
 let username = "";
 let onlineUsers = [];

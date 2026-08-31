@@ -5,6 +5,13 @@
     <!-- ADDED: viewport meta — critical for mobile scaling -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <link rel="stylesheet" href="style.css">
+    <!-- ADDED: apply saved theme before page paints (avoids flash) -->
+    <script>
+        (function () {
+            var t = localStorage.getItem("chatAppTheme") || "dark";
+            document.documentElement.setAttribute("data-theme", t);
+        })();
+    </script>
 </head>
 <body>
 
@@ -66,6 +73,9 @@
                     <div class="pch-status" id="pch-status"></div>
                 </div>
             </div>
+
+            <!-- ADDED: dark/light theme toggle -->
+            <button class="theme-toggle-btn" id="themeToggleBtn" onclick="toggleTheme()" title="Toggle dark/light theme">🌙</button>
         </div>
 
         <div id="messages" class="messages"></div>

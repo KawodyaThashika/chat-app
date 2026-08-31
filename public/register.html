@@ -5,6 +5,13 @@
     <title>Chat Registration</title>
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <!-- ADDED: apply saved theme before page paints (avoids flash) -->
+    <script>
+        (function () {
+            var t = localStorage.getItem("chatAppTheme") || "dark";
+            document.documentElement.setAttribute("data-theme", t);
+        })();
+    </script>
 </head>
 <body>
 
@@ -14,6 +21,8 @@
 </div>
 
 <div class="login-container">
+    <!-- ADDED: dark/light theme toggle -->
+    <button class="theme-toggle-btn" id="themeToggleBtn" onclick="toggleTheme()" title="Toggle dark/light theme">🌙</button>
     <h2>Chat Registration</h2>
 
     <form action="/register" method="POST">
@@ -41,6 +50,22 @@
 
 <script>
 
+// ADDED: dark/light theme toggle
+function toggleTheme() {
+    const html = document.documentElement;
+    const current = html.getAttribute("data-theme") || "dark";
+    const next = current === "dark" ? "light" : "dark";
+    html.setAttribute("data-theme", next);
+    localStorage.setItem("chatAppTheme", next);
+    updateThemeIcon();
+}
+function updateThemeIcon() {
+    const btn = document.getElementById("themeToggleBtn");
+    if (!btn) return;
+    const current = document.documentElement.getAttribute("data-theme") || "dark";
+    btn.textContent = current === "dark" ? "☀️" : "🌙";
+}
+document.addEventListener("DOMContentLoaded", updateThemeIcon);
 
     function togglePassword(fieldId, icon) {
     const input = document.getElementById(fieldId);
